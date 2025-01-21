@@ -71,9 +71,10 @@ A collection of different interval types used to control event timing in simulat
   - **Normal (Gaussian) Distribution**  
     An interval modeled with a normal distribution, where durations are centered around a mean with a specified standard deviation, reflecting natural variance.
 
-## Example
+## Examples
 
-Code:
+### Processing events
+
 ```dart
 import 'package:simdart/simdart.dart';
 
@@ -108,6 +109,43 @@ Output:
 [10][A][resumed]
 [11][C][executed]
 [21][C][resumed]
+```
+
+### Resource capacity
+
+```dart
+import 'package:simdart/simdart.dart';
+
+void main() async {
+  final SimDart sim = SimDart(onTrack: (track) => print(track));
+
+  sim.resources.limited(id: 'resource', capacity: 2);
+
+  sim.process(eventA, name: 'A1', resourceId: 'resource');
+  sim.process(eventA, name: 'A2', start: 1, resourceId: 'resource');
+  sim.process(eventA, name: 'A3', start: 2, resourceId: 'resource');
+  sim.process(eventB, name: 'B', start: 3);
+
+  await sim.run();
+}
+
+void eventA(EventContext context) async {
+  await context.wait(10);
+}
+
+void eventB(EventContext context) async {}
+```
+
+Output:
+```
+[0][A1][executed]
+[1][A2][executed]
+[2][A3][rejected]
+[3][B][executed]
+[10][A1][resumed]
+[10][A3][executed]
+[11][A2][resumed]
+[20][A3][resumed]
 ```
 
 ## Upcoming Features

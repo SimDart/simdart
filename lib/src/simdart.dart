@@ -73,6 +73,12 @@ class SimDart {
 
   final Map<dynamic, Resource> _resources = {};
 
+  /// Holds the configurations for the resources in the simulator.
+  ///
+  /// Once the simulation begins, no new resource configurations can be added to
+  /// this list.
+  final ResourcesConfigurator resources = ResourcesConfigurator();
+
   /// The instance of the random number generator used across the simulation.
   /// It is initialized once and reused to improve performance, avoiding the need to
   /// instantiate a new `Random` object for each event.
@@ -123,10 +129,6 @@ class SimDart {
 
   bool _nextEventScheduled = false;
 
-  void addResource(Resource resource) {
-    _resources[resource.id] = resource;
-  }
-
   /// Runs the simulation, processing events in chronological order.
   Future<void> run() async {
     if (_terminator != null) {
@@ -139,6 +141,14 @@ class SimDart {
     }
     _duration = null;
     _startTime = null;
+
+    for (ResourceConfiguration rc
+        in ResourcesConfiguratorHelper.iterable(configurator: resources)) {
+      if (rc is LimitedResourceConfiguration) {
+        _resources[rc.id] = LimitedResource(id: rc.id, capacity: rc.capacity);
+      }
+    }
+
     _terminator = Completer<void>();
     _scheduleNextEvent();
     await _terminator?.future;
@@ -211,7 +221,12 @@ class SimDart {
         if (resource != null && event.resource!.acquired) {
           resource.release(event);
         }
-        _restoreEvents();
+        if (event.resource != null) {
+          // Event was holding some resource, now maybe another event can be executed.
+          while (_waitingForResource.isNotEmpty) {
+            _events.add(_waitingForResource.removeFirst());
+          }
+        }
       });
     } else {
       _waitingForResource.add(event);
@@ -231,13 +246,6 @@ class SimDart {
         name: event.eventName,
         time: now,
         resourceUsage: resourceUsage);
-  }
-
-  /// Restores all accumulated events from the temporary [_waitingForResource] queue to the original event list.
-  void _restoreEvents() {
-    while (_waitingForResource.isNotEmpty) {
-      _events.add(_waitingForResource.removeFirst());
-    }
   }
 
   /// Schedules a new event to occur at a specific simulation time or after a delay.

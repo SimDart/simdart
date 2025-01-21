@@ -7,7 +7,7 @@ void main() {
   group('Resource', () {
     test('Capacity 1', () async {
       TestHelper helper = TestHelper();
-      helper.sim.addResource(LimitedResource(id: 'r'));
+      helper.sim.resources.limited(id: 'r');
 
       fA(context) async {
         await context.wait(1);
@@ -39,7 +39,7 @@ void main() {
     });
     test('Capacity 2', () async {
       TestHelper helper = TestHelper();
-      helper.sim.addResource(LimitedResource(id: 'r', capacity: 2));
+      helper.sim.resources.limited(id: 'r', capacity: 2);
 
       fA(context) async {
         await context.wait(1);
