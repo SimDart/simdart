@@ -67,5 +67,35 @@ void main() {
       helper.testTrack(index: 5, name: 'B', status: Status.resumed, time: 1);
       helper.testTrack(index: 6, name: 'C', status: Status.resumed, time: 2);
     });
+    test('Avoid unnecessary re-executing', () async {
+      TestHelper helper = TestHelper();
+      helper.sim.resources.limited(id: 'r', capacity: 2);
+
+      eventA(EventContext context) async {
+        await context.wait(10);
+      }
+
+      eventB(EventContext context) async {}
+
+      SimDart sim = helper.sim;
+
+      sim.resources.limited(id: 'resource', capacity: 2);
+
+      sim.process(eventA, name: 'A1', resourceId: 'resource');
+      sim.process(eventA, name: 'A2', start: 1, resourceId: 'resource');
+      sim.process(eventA, name: 'A3', start: 2, resourceId: 'resource');
+      sim.process(eventB, name: 'B', start: 3);
+
+      await helper.sim.run();
+      expect(helper.trackList.length, 8);
+      helper.testTrack(index: 0, name: 'A1', status: Status.executed, time: 0);
+      helper.testTrack(index: 1, name: 'A2', status: Status.executed, time: 1);
+      helper.testTrack(index: 2, name: 'A3', status: Status.rejected, time: 2);
+      helper.testTrack(index: 3, name: 'B', status: Status.executed, time: 3);
+      helper.testTrack(index: 4, name: 'A1', status: Status.resumed, time: 10);
+      helper.testTrack(index: 5, name: 'A3', status: Status.executed, time: 10);
+      helper.testTrack(index: 6, name: 'A2', status: Status.resumed, time: 11);
+      helper.testTrack(index: 7, name: 'A3', status: Status.resumed, time: 20);
+    });
   });
 }
