@@ -1,8 +1,8 @@
-## 0.1.0-rc.3
+## 0.1.0
 
 * Initial release
   * Discrete event processing
-  * Event scheduling, execution, and waiting
-  * Intervals
+  * Event scheduling, execution, waiting, and repetition
+  * Intervals management
   * Resources
     * Capacity limit

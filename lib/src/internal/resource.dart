@@ -1,5 +1,7 @@
+import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
 
+@internal
 abstract class Resource {
   final String id;
   final int capacity;
@@ -17,6 +19,7 @@ abstract class Resource {
   bool isAvailable();
 }
 
+@internal
 class LimitedResource extends Resource {
   LimitedResource({required super.id, super.capacity, super.acquisitionRule});
 
@@ -28,20 +31,16 @@ class LimitedResource extends Resource {
     }
     if (isAvailable()) {
       queue.add(event);
-      ResourceStateHelper.setAcquired(
-          resourceState: event.resource!, acquired: true);
       return true;
-    } else {
-      // waiting.add(event);
-      return false;
     }
+
+    // waiting.add(event);
+    return false;
   }
 
   @override
   void release(EventContext event) {
     queue.remove(event);
-    ResourceStateHelper.setAcquired(
-        resourceState: event.resource!, acquired: false);
   }
 
   @override

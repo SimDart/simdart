@@ -1,6 +1,6 @@
 name: simdart
 description: A discrete event simulation package for Dart, designed for modeling and analyzing processes and systems.
-version: 0.1.0-rc.3
+version: 0.1.0
 repository: https://github.com/SimDart/simdart
 
 topics:

@@ -1,5 +1,6 @@
 [![](https://img.shields.io/pub/v/simdart.svg)](https://pub.dev/packages/simdart)
 [![](https://img.shields.io/badge/%F0%9F%91%8D%20and%20%E2%AD%90-are%20free-yellow)](#)
+[![](https://img.shields.io/badge/Under%20Development-blue)](#)
 
 ![](https://simdart.github.io/simdart-assets/simdart-text-128h.png)
 
@@ -71,31 +72,32 @@ A collection of different interval types used to control event timing in simulat
   - **Normal (Gaussian) Distribution**  
     An interval modeled with a normal distribution, where durations are centered around a mean with a specified standard deviation, reflecting natural variance.
 
-## Example
+## Examples
 
-Code:
+### Processing events
+
 ```dart
 import 'package:simdart/simdart.dart';
 
 void main() async {
   final SimDart sim = SimDart(onTrack: (track) => print(track));
 
-  sim.process(eventA, name: 'A');
-  sim.process(eventB, start: 5, name: 'B');
+  sim.process(event: _a, name: 'A');
+  sim.process(event: _b, start: 5, name: 'B');
 
   await sim.run();
 }
 
-void eventA(EventContext context) async {
+void _a(EventContext context) async {
   await context.wait(10);
-  context.sim.process(eventC, delay: 1, name: 'C');
+  context.sim.process(event: _c, delay: 1, name: 'C');
 }
 
-void eventB(EventContext context) async {
+void _b(EventContext context) async {
   await context.wait(1);
 }
 
-void eventC(EventContext context) async {
+void _c(EventContext context) async {
   await context.wait(10);
 }
 ```
@@ -110,11 +112,66 @@ Output:
 [21][C][resumed]
 ```
 
-## Upcoming Features
+### Resource capacity
 
-- **Resource Management**:
-  - Upcoming support for simulating resource allocation, allowing for the management of limited resources across different events in the simulation.
+```dart
+import 'package:simdart/simdart.dart';
 
-- **Advanced Event Behaviors**:
-  - Future enhancements will introduce more granular control over event behaviors, allowing for greater flexibility in simulating complex systems.
+void main() async {
+  final SimDart sim = SimDart(onTrack: (track) => print(track));
 
+  sim.resources.limited(id: 'resource', capacity: 2);
+
+  sim.process(event: _a, name: 'A1', resourceId: 'resource');
+  sim.process(event: _a, name: 'A2', start: 1, resourceId: 'resource');
+  sim.process(event: _a, name: 'A3', start: 2, resourceId: 'resource');
+  sim.process(event: _b, name: 'B', start: 3);
+
+  await sim.run();
+}
+
+void _a(EventContext context) async {
+  await context.wait(10);
+}
+
+void _b(EventContext context) async {}
+```
+
+Output:
+```
+[0][A1][executed]
+[1][A2][executed]
+[2][A3][rejected]
+[3][B][executed]
+[10][A1][resumed]
+[10][A3][executed]
+[11][A2][resumed]
+[20][A3][resumed]
+```
+
+### Repeating process
+
+```dart
+import 'package:simdart/simdart.dart';
+
+void main() async {
+  final SimDart sim = SimDart(onTrack: (track) => print(track));
+
+  sim.repeatProcess(
+          event: _a,
+          start: 1,
+          name: 'A',
+          interval: Interval.fixed(fixedInterval: 2, untilTime: 5));
+
+  await sim.run();
+}
+
+void _a(EventContext context) async {}
+```
+
+Output:
+```
+[1][A][executed]
+[3][A][executed]
+[5][A][executed]
+```
