@@ -36,5 +36,54 @@ void main() {
       helper.testTrack(index: 2, name: 'A', status: Status.executed, time: 1);
       helper.testTrack(index: 3, name: 'A', status: Status.resumed, time: 2);
     });
+
+    test('Resource - keep', () async {
+      TestHelper helper = TestHelper();
+
+      helper.sim.resources.limited(id: 'r');
+
+      helper.sim.repeatProcess(
+          event: (context) async {
+            await context.wait(10);
+          },
+          name: 'A',
+          resourceId: 'r',
+          interval: Interval.fixed(fixedInterval: 1, untilTime: 3));
+
+      await helper.sim.run();
+      expect(helper.trackList.length, 9);
+      helper.testTrack(index: 0, name: 'A', status: Status.executed, time: 0);
+      helper.testTrack(index: 1, name: 'A', status: Status.rejected, time: 1);
+      helper.testTrack(index: 2, name: 'A', status: Status.rejected, time: 2);
+      helper.testTrack(index: 3, name: 'A', status: Status.resumed, time: 10);
+      helper.testTrack(index: 4, name: 'A', status: Status.executed, time: 10);
+      helper.testTrack(index: 5, name: 'A', status: Status.rejected, time: 10);
+      helper.testTrack(index: 6, name: 'A', status: Status.resumed, time: 20);
+      helper.testTrack(index: 7, name: 'A', status: Status.executed, time: 20);
+      helper.testTrack(index: 8, name: 'A', status: Status.resumed, time: 30);
+    });
+
+    test('Resource - stop', () async {
+      TestHelper helper = TestHelper();
+
+      helper.sim.resources.limited(id: 'r');
+
+      helper.sim.repeatProcess(
+          event: (context) async {
+            await context.wait(2);
+          },
+          name: 'A',
+          resourceId: 'r',
+          interval: Interval.fixed(fixedInterval: 1, untilTime: 50),
+          rejectedEventPolicy: RejectedEventPolicy.stopRepeating);
+
+      await helper.sim.run();
+      expect(helper.trackList.length, 5);
+      helper.testTrack(index: 0, name: 'A', status: Status.executed, time: 0);
+      helper.testTrack(index: 1, name: 'A', status: Status.rejected, time: 1);
+      helper.testTrack(index: 2, name: 'A', status: Status.resumed, time: 2);
+      helper.testTrack(index: 3, name: 'A', status: Status.executed, time: 2);
+      helper.testTrack(index: 4, name: 'A', status: Status.resumed, time: 4);
+    });
   });
 }

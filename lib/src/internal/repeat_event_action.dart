@@ -31,16 +31,36 @@ class RepeatEventAction extends TimeAction {
 
   final SimDart sim;
 
+  bool _discard = false;
+
   @override
   void execute() {
-    sim.process(event: event, resourceId: resourceId, name: eventName);
+    if (_discard) {
+      return;
+    }
+    //TODO Run directly without adding to the loop?
+    SimDartHelper.process(
+        sim: sim,
+        event: event,
+        start: null,
+        delay: null,
+        name: eventName,
+        resourceId: resourceId,
+        onReject: rejectedEventPolicy == RejectedEventPolicy.stopRepeating
+            ? _removeFromLoop
+            : null,
+        interval: null,
+        rejectedEventPolicy: null);
     int? start = interval.nextStart(sim);
     if (start != null) {
       //TODO avoid start = now?
       this.start = start;
       SimDartHelper.addAction(sim: sim, action: this);
     }
-    //TODO rejectedEventPolicy
+  }
+
+  void _removeFromLoop() {
+    _discard = true;
   }
 
   @override

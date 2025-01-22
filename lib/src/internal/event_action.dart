@@ -16,6 +16,7 @@ class EventAction extends TimeAction with EventContext {
       required this.event,
       required this.resourceId,
       required this.onTrack,
+      required this.onReject,
       required this.secondarySortByName})
       : _eventName = eventName;
 
@@ -30,6 +31,8 @@ class EventAction extends TimeAction with EventContext {
 
   /// The event to be executed.
   final Event event;
+
+  final Function? onReject;
 
   @override
   final SimDart sim;
@@ -95,6 +98,7 @@ class EventAction extends TimeAction with EventContext {
         }
       });
     } else {
+      onReject?.call();
       SimDartHelper.queueOnWaitingForResource(sim: sim, action: this);
     }
   }

@@ -125,6 +125,7 @@ class SimDart with TimeLoopMixin {
         delay: delay,
         name: name,
         resourceId: resourceId,
+        onReject: null,
         interval: interval,
         rejectedEventPolicy: rejectedEventPolicy);
   }
@@ -152,6 +153,7 @@ class SimDart with TimeLoopMixin {
         delay: delay,
         name: name,
         resourceId: resourceId,
+        onReject: null,
         interval: null,
         rejectedEventPolicy: null);
   }
@@ -162,6 +164,7 @@ class SimDart with TimeLoopMixin {
       required int? delay,
       required String? name,
       required String? resourceId,
+      required Function? onReject,
       required Interval? interval,
       required RejectedEventPolicy? rejectedEventPolicy}) {
     if (start != null && delay != null) {
@@ -206,6 +209,7 @@ class SimDart with TimeLoopMixin {
           eventName: name,
           event: event,
           resourceId: resourceId,
+          onReject: onReject,
           secondarySortByName: secondarySortByName));
     }
   }
@@ -234,9 +238,6 @@ enum RejectedEventPolicy {
   /// Continues the repetition of the event at the specified intervals, even after the event was rejected.
   keepRepeating,
 
-  /// Restart the repetition once the event has been resumed.
-  restartOnResume,
-
   /// Stops the repetition of the event entirely after it has been rejected.
   stopRepeating
 }
@@ -246,6 +247,27 @@ enum RejectedEventPolicy {
 /// This class is marked as internal and should only be used within the library.
 @internal
 class SimDartHelper {
+  static void process(
+      {required SimDart sim,
+      required Event event,
+      required int? start,
+      required int? delay,
+      required String? name,
+      required String? resourceId,
+      required Function? onReject,
+      required Interval? interval,
+      required RejectedEventPolicy? rejectedEventPolicy}) {
+    sim._process(
+        event: event,
+        start: start,
+        delay: delay,
+        name: name,
+        resourceId: resourceId,
+        onReject: onReject,
+        interval: interval,
+        rejectedEventPolicy: rejectedEventPolicy);
+  }
+
   /// Adds an [TimeAction] to the loop.
   static void addAction({required SimDart sim, required TimeAction action}) {
     sim._loop.addAction(action);
