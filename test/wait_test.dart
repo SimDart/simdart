@@ -7,10 +7,12 @@ void main() {
   group('Wait', () {
     test('with await', () async {
       TestHelper helper = TestHelper();
-      helper.sim.process((context) async {
-        await context.wait(10);
-      }, name: 'a');
-      helper.sim.process(TestHelper.emptyEvent, start: 5, name: 'b');
+      helper.sim.process(
+          event: (context) async {
+            await context.wait(10);
+          },
+          name: 'a');
+      helper.sim.process(event: TestHelper.emptyEvent, start: 5, name: 'b');
       await helper.sim.run();
       expect(helper.trackList.length, 3);
       helper.testTrack(index: 0, name: 'a', status: Status.executed, time: 0);
@@ -18,11 +20,15 @@ void main() {
       helper.testTrack(index: 2, name: 'a', status: Status.resumed, time: 10);
 
       helper = TestHelper();
-      helper.sim.process((context) async {
-        await context.wait(10);
-        helper.sim.process(TestHelper.emptyEvent, delay: 1, name: 'c');
-      }, start: 0, name: 'a');
-      helper.sim.process(TestHelper.emptyEvent, delay: 5, name: 'b');
+      helper.sim.process(
+          event: (context) async {
+            await context.wait(10);
+            helper.sim
+                .process(event: TestHelper.emptyEvent, delay: 1, name: 'c');
+          },
+          start: 0,
+          name: 'a');
+      helper.sim.process(event: TestHelper.emptyEvent, delay: 5, name: 'b');
       await helper.sim.run();
       expect(helper.trackList.length, 4);
       helper.testTrack(index: 0, name: 'a', status: Status.executed, time: 0);
@@ -33,10 +39,12 @@ void main() {
 
     test('without await', () async {
       TestHelper helper = TestHelper();
-      helper.sim.process((context) async {
-        context.wait(10);
-      }, name: 'a');
-      helper.sim.process(TestHelper.emptyEvent, start: 5, name: 'b');
+      helper.sim.process(
+          event: (context) async {
+            context.wait(10);
+          },
+          name: 'a');
+      helper.sim.process(event: TestHelper.emptyEvent, start: 5, name: 'b');
       await helper.sim.run();
       expect(helper.trackList.length, 3);
       helper.testTrack(index: 0, name: 'a', status: Status.executed, time: 0);
@@ -44,11 +52,15 @@ void main() {
       helper.testTrack(index: 2, name: 'a', status: Status.resumed, time: 10);
 
       helper = TestHelper();
-      helper.sim.process((context) async {
-        context.wait(10);
-        helper.sim.process(TestHelper.emptyEvent, delay: 1, name: 'c');
-      }, start: 0, name: 'a');
-      helper.sim.process(TestHelper.emptyEvent, delay: 5, name: 'b');
+      helper.sim.process(
+          event: (context) async {
+            context.wait(10);
+            helper.sim
+                .process(event: TestHelper.emptyEvent, delay: 1, name: 'c');
+          },
+          start: 0,
+          name: 'a');
+      helper.sim.process(event: TestHelper.emptyEvent, delay: 5, name: 'b');
       await helper.sim.run();
       expect(helper.trackList.length, 4);
       helper.testTrack(index: 0, name: 'a', status: Status.executed, time: 0);

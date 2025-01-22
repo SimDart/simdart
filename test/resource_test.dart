@@ -21,9 +21,9 @@ void main() {
         await context.wait(1);
       }
 
-      helper.sim.process(fA, name: 'A', resourceId: 'r');
-      helper.sim.process(fB, name: 'B', resourceId: 'r');
-      helper.sim.process(fC, name: 'C', resourceId: 'r');
+      helper.sim.process(event: fA, name: 'A', resourceId: 'r');
+      helper.sim.process(event: fB, name: 'B', resourceId: 'r');
+      helper.sim.process(event: fC, name: 'C', resourceId: 'r');
       await helper.sim.run();
       expect(helper.trackList.length, 9);
       helper.testTrack(index: 0, name: 'A', status: Status.executed, time: 0);
@@ -53,9 +53,9 @@ void main() {
         await context.wait(1);
       }
 
-      helper.sim.process(fA, name: 'A', resourceId: 'r');
-      helper.sim.process(fB, name: 'B', resourceId: 'r');
-      helper.sim.process(fC, name: 'C', resourceId: 'r');
+      helper.sim.process(event: fA, name: 'A', resourceId: 'r');
+      helper.sim.process(event: fB, name: 'B', resourceId: 'r');
+      helper.sim.process(event: fC, name: 'C', resourceId: 'r');
       await helper.sim.run();
       expect(helper.trackList.length, 7);
       helper.testTrack(index: 0, name: 'A', status: Status.executed, time: 0);
@@ -81,10 +81,10 @@ void main() {
 
       sim.resources.limited(id: 'resource', capacity: 2);
 
-      sim.process(eventA, name: 'A1', resourceId: 'resource');
-      sim.process(eventA, name: 'A2', start: 1, resourceId: 'resource');
-      sim.process(eventA, name: 'A3', start: 2, resourceId: 'resource');
-      sim.process(eventB, name: 'B', start: 3);
+      sim.process(event: eventA, name: 'A1', resourceId: 'resource');
+      sim.process(event: eventA, name: 'A2', start: 1, resourceId: 'resource');
+      sim.process(event: eventA, name: 'A3', start: 2, resourceId: 'resource');
+      sim.process(event: eventB, name: 'B', start: 3);
 
       await helper.sim.run();
       expect(helper.trackList.length, 8);
