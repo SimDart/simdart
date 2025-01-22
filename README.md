@@ -1,5 +1,6 @@
 [![](https://img.shields.io/pub/v/simdart.svg)](https://pub.dev/packages/simdart)
 [![](https://img.shields.io/badge/%F0%9F%91%8D%20and%20%E2%AD%90-are%20free-yellow)](#)
+[![](https://img.shields.io/badge/Under%20Development-blue)](#)
 
 ![](https://simdart.github.io/simdart-assets/simdart-text-128h.png)
 
@@ -174,12 +175,3 @@ Output:
 [3][A][executed]
 [5][A][executed]
 ```
-
-## Upcoming Features
-
-- **Resource Management**:
-  - Upcoming support for simulating resource allocation, allowing for the management of limited resources across different events in the simulation.
-
-- **Advanced Event Behaviors**:
-  - Future enhancements will introduce more granular control over event behaviors, allowing for greater flexibility in simulating complex systems.
-
