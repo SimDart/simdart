@@ -81,22 +81,22 @@ import 'package:simdart/simdart.dart';
 void main() async {
   final SimDart sim = SimDart(onTrack: (track) => print(track));
 
-  sim.process(eventA, name: 'A');
-  sim.process(eventB, start: 5, name: 'B');
+  sim.process(event: _a, name: 'A');
+  sim.process(event: _b, start: 5, name: 'B');
 
   await sim.run();
 }
 
-void eventA(EventContext context) async {
+void _a(EventContext context) async {
   await context.wait(10);
-  context.sim.process(eventC, delay: 1, name: 'C');
+  context.sim.process(event: _c, delay: 1, name: 'C');
 }
 
-void eventB(EventContext context) async {
+void _b(EventContext context) async {
   await context.wait(1);
 }
 
-void eventC(EventContext context) async {
+void _c(EventContext context) async {
   await context.wait(10);
 }
 ```
@@ -121,19 +121,19 @@ void main() async {
 
   sim.resources.limited(id: 'resource', capacity: 2);
 
-  sim.process(eventA, name: 'A1', resourceId: 'resource');
-  sim.process(eventA, name: 'A2', start: 1, resourceId: 'resource');
-  sim.process(eventA, name: 'A3', start: 2, resourceId: 'resource');
-  sim.process(eventB, name: 'B', start: 3);
+  sim.process(event: _a, name: 'A1', resourceId: 'resource');
+  sim.process(event: _a, name: 'A2', start: 1, resourceId: 'resource');
+  sim.process(event: _a, name: 'A3', start: 2, resourceId: 'resource');
+  sim.process(event: _b, name: 'B', start: 3);
 
   await sim.run();
 }
 
-void eventA(EventContext context) async {
+void _a(EventContext context) async {
   await context.wait(10);
 }
 
-void eventB(EventContext context) async {}
+void _b(EventContext context) async {}
 ```
 
 Output:
@@ -146,6 +146,33 @@ Output:
 [10][A3][executed]
 [11][A2][resumed]
 [20][A3][resumed]
+```
+
+### Repeating process
+
+```dart
+import 'package:simdart/simdart.dart';
+
+void main() async {
+  final SimDart sim = SimDart(onTrack: (track) => print(track));
+
+  sim.repeatProcess(
+          event: _a,
+          start: 1,
+          name: 'A',
+          interval: Interval.fixed(fixedInterval: 2, untilTime: 6));
+
+  await sim.run();
+}
+
+void _a(EventContext context) async {}
+```
+
+Output:
+```
+[1][A][executed]
+[3][A][executed]
+[5][A][executed]
 ```
 
 ## Upcoming Features
