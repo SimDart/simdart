@@ -52,6 +52,8 @@ class TimeLoop with TimeLoopMixin {
 
   bool _nextEventScheduled = false;
 
+  late int? _until;
+
   @override
   int get now => _now;
   late int _now;
@@ -59,7 +61,12 @@ class TimeLoop with TimeLoopMixin {
   Completer<void>? _terminator;
 
   /// Runs the simulation, processing actions in chronological order.
-  Future<void> run() async {
+  Future<void> run({int? until}) async {
+    if (until != null && _now > until) {
+      throw ArgumentError('`now` must be less than or equal to `until`.');
+    }
+    _until = until;
+
     if (_terminator != null) {
       return;
     }
@@ -76,7 +83,7 @@ class TimeLoop with TimeLoopMixin {
     _terminator = Completer<void>();
     _scheduleNextEvent();
     await _terminator?.future;
-    _duration = now - (startTime ?? 0);
+    _duration = _now - (startTime ?? 0);
     _terminator = null;
   }
 
@@ -110,6 +117,11 @@ class TimeLoop with TimeLoopMixin {
     // Advance the simulation time to the action's start time.
     if (action.start > now) {
       _now = action.start;
+      if (_until != null && now > _until!) {
+        _startTime ??= now;
+        _terminator?.complete();
+        return;
+      }
     } else if (action.start < now) {
       action.start = now;
     }

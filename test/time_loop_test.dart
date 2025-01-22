@@ -19,7 +19,7 @@ void main() {
   group('TimeLoop', () {
     test('Loop', () async {
       TimeLoop loop = TimeLoop(
-          now: 0,
+          now: null,
           executionPriority: ExecutionPriority.high,
           beforeRun: () {},
           startTimeHandling: StartTimeHandling.throwErrorIfPast);

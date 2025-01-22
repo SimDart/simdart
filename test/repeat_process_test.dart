@@ -14,9 +14,10 @@ void main() {
           interval: Interval.fixed(fixedInterval: 1, untilTime: 2));
 
       await helper.sim.run();
-      expect(helper.trackList.length, 2);
+      expect(helper.trackList.length, 3);
       helper.testTrack(index: 0, name: 'A', status: Status.executed, time: 0);
       helper.testTrack(index: 1, name: 'A', status: Status.executed, time: 1);
+      helper.testTrack(index: 2, name: 'A', status: Status.executed, time: 2);
     });
 
     test('Wait', () async {
@@ -30,11 +31,13 @@ void main() {
           interval: Interval.fixed(fixedInterval: 1, untilTime: 2));
 
       await helper.sim.run();
-      expect(helper.trackList.length, 4);
+      expect(helper.trackList.length, 6);
       helper.testTrack(index: 0, name: 'A', status: Status.executed, time: 0);
       helper.testTrack(index: 1, name: 'A', status: Status.resumed, time: 1);
       helper.testTrack(index: 2, name: 'A', status: Status.executed, time: 1);
       helper.testTrack(index: 3, name: 'A', status: Status.resumed, time: 2);
+      helper.testTrack(index: 4, name: 'A', status: Status.executed, time: 2);
+      helper.testTrack(index: 5, name: 'A', status: Status.resumed, time: 3);
     });
 
     test('Resource - keep', () async {
@@ -48,7 +51,7 @@ void main() {
           },
           name: 'A',
           resourceId: 'r',
-          interval: Interval.fixed(fixedInterval: 1, untilTime: 3));
+          interval: Interval.fixed(fixedInterval: 1, untilTime: 2));
 
       await helper.sim.run();
       expect(helper.trackList.length, 9);

@@ -20,22 +20,29 @@ import 'package:simdart/src/start_time_handling.dart';
 class SimDart with TimeLoopMixin {
   /// Creates a simulation instance.
   ///
-  /// [startTimeHandling] determines how to handle events scheduled with a start
+  /// - [now]: The starting time of the simulation. Defaults to `0` if null.
+  /// If provided, it must be less than or equal to [until].
+  ///
+  /// - [startTimeHandling]: Determines how to handle events scheduled with a start
   /// time in the past. The default behavior is [StartTimeHandling.throwErrorIfPast].
-  /// [onTrack] is an optional callback function that can be used to track the progress
+  ///
+  /// - [onTrack]: The optional callback function that can be used to track the progress
   /// of the simulation.
-  /// [seed] is an optional parameter used to initialize the random number generator
+  ///
+  /// - [seed]: The optional parameter used to initialize the random number generator
   /// for deterministic behavior in the simulation. If provided, it ensures that the
   /// random sequence is reproducible for the same seed value.
-  /// [secondarySortByName] - If true, events with the same start time are sorted
+  ///
+  /// - [secondarySortByName]: If true, events with the same start time are sorted
   /// by their event name. Defaults to false.
-  /// [executionPriority] defines the priority of task execution in the simulation.
+  ///
+  /// - [executionPriority]: Defines the priority of task execution in the simulation.
   SimDart(
       {StartTimeHandling startTimeHandling = StartTimeHandling.throwErrorIfPast,
       OnTrack? onTrack,
+      int? now,
       this.secondarySortByName = false,
       ExecutionPriority executionPriority = ExecutionPriority.high,
-      int? now,
       int? seed})
       : _onTrack = onTrack,
         random = Random(seed) {
@@ -90,8 +97,11 @@ class SimDart with TimeLoopMixin {
   }
 
   /// Runs the simulation, processing events in chronological order.
-  Future<void> run() async {
-    return _loop.run();
+  ///
+  /// - [until]: The time at which execution should stop. Execution will include events
+  ///   scheduled at this time (inclusive). If null, execution will continue indefinitely.
+  Future<void> run({int? until}) async {
+    return _loop.run(until: until);
   }
 
   /// Schedules a new event to occur repeatedly based on the specified interval configuration.
