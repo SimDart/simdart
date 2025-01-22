@@ -7,14 +7,22 @@ typedef NextIncrementGenerator = int Function(SimDart sim);
 /// Abstract class representing an interval. The [getIncrement] method is implemented
 /// by each subclass to define how the interval is calculated.
 ///
+/// - [untilTime]: The time at which execution should stop. Execution will include events
+///   scheduled at this time (inclusive). If null, execution will continue indefinitely.
+///
+/// - [untilCount]: The maximum number of times execution can occur. Execution will include
+///   the event that reaches this count (inclusive). If null, execution will continue indefinitely.
+///
 /// If both [untilTime] and [untilCount] are null, execution will repeat indefinitely.
 abstract class Interval {
   Interval({required this.untilTime, required this.untilCount});
 
-  /// The time at which execution should stop. If null, it will continue indefinitely.
+  /// The time at which execution should stop. The execution will include events
+  /// scheduled at this time (inclusive). If null, it will continue indefinitely.
   final int? untilTime;
 
-  /// The maximum number of times execution can occur. If null, it will continue indefinitely.
+  /// The maximum number of times execution can occur. The execution will include
+  /// the event that reaches this count (inclusive). If null, it will continue indefinitely.
   final int? untilCount;
 
   /// A counter to track how many times the event has been executed.
@@ -27,8 +35,8 @@ abstract class Interval {
   /// Returns the next start time for an event, calculated from the current time (now).
   int? nextStart(SimDart sim) {
     int start = sim.now + getIncrement(sim);
-    if ((untilTime != null && start >= untilTime!) ||
-        (untilCount != null && _executionCount >= untilCount!)) {
+    if ((untilTime != null && start > untilTime!) ||
+        (untilCount != null && _executionCount > untilCount!)) {
       return null;
     }
     if (untilCount != null) {
@@ -40,6 +48,14 @@ abstract class Interval {
   /// Factory method for creating a FixedInterval.
   ///
   /// Creates an interval with a fixed duration.
+  ///
+  /// - [untilTime]: The time at which execution should stop. Execution will include events
+  ///   scheduled at this time (inclusive). If null, execution will continue indefinitely.
+  ///
+  /// - [untilCount]: The maximum number of times execution can occur. Execution will include
+  ///   the event that reaches this count (inclusive). If null, execution will continue indefinitely.
+  ///
+  /// If both [untilTime] and [untilCount] are null, execution will repeat indefinitely.
   factory Interval.fixed(
           {required int fixedInterval, int? untilTime, int? untilCount}) =>
       FixedInterval._(
@@ -51,6 +67,14 @@ abstract class Interval {
   ///
   /// Creates an interval where the duration is randomly generated using the
   /// provided generator function.
+  ///
+  /// - [untilTime]: The time at which execution should stop. Execution will include events
+  ///   scheduled at this time (inclusive). If null, execution will continue indefinitely.
+  ///
+  /// - [untilCount]: The maximum number of times execution can occur. Execution will include
+  ///   the event that reaches this count (inclusive). If null, execution will continue indefinitely.
+  ///
+  /// If both [untilTime] and [untilCount] are null, execution will repeat indefinitely.
   factory Interval.random(
           {required NextIncrementGenerator generator,
           int? untilTime,
@@ -62,6 +86,14 @@ abstract class Interval {
   ///
   /// Creates an interval where the duration is conditionally computed based
   /// on the simulation state.
+  ///
+  /// - [untilTime]: The time at which execution should stop. Execution will include events
+  ///   scheduled at this time (inclusive). If null, execution will continue indefinitely.
+  ///
+  /// - [untilCount]: The maximum number of times execution can occur. Execution will include
+  ///   the event that reaches this count (inclusive). If null, execution will continue indefinitely.
+  ///
+  /// If both [untilTime] and [untilCount] are null, execution will repeat indefinitely.
   factory Interval.conditional(
           {required NextIncrementGenerator generator,
           int? untilTime,
@@ -73,6 +105,14 @@ abstract class Interval {
   ///
   /// Creates an interval with probabilistic distribution using the provided
   /// random number generator function.
+  ///
+  /// - [untilTime]: The time at which execution should stop. Execution will include events
+  ///   scheduled at this time (inclusive). If null, execution will continue indefinitely.
+  ///
+  /// - [untilCount]: The maximum number of times execution can occur. Execution will include
+  ///   the event that reaches this count (inclusive). If null, execution will continue indefinitely.
+  ///
+  /// If both [untilTime] and [untilCount] are null, execution will repeat indefinitely.
   factory Interval.probabilistic(
           {required NextIncrementGenerator generator,
           int? untilTime,
@@ -84,6 +124,12 @@ abstract class Interval {
   ///
   /// Creates a probabilistic interval with a uniform distribution between
   /// [min] and [max].
+  ///
+  /// - [untilTime]: The time at which execution should stop. Execution will include events
+  ///   scheduled at this time (inclusive). If null, execution will continue indefinitely.
+  ///
+  /// - [untilCount]: The maximum number of times execution can occur. Execution will include
+  ///   the event that reaches this count (inclusive). If null, execution will continue indefinitely.
   factory Interval.uniform(
           {required int min,
           required int max,
@@ -96,6 +142,14 @@ abstract class Interval {
   ///
   /// Creates a probabilistic interval with an exponential distribution based
   /// on the provided [mean].
+  ///
+  /// - [untilTime]: The time at which execution should stop. Execution will include events
+  ///   scheduled at this time (inclusive). If null, execution will continue indefinitely.
+  ///
+  /// - [untilCount]: The maximum number of times execution can occur. Execution will include
+  ///   the event that reaches this count (inclusive). If null, execution will continue indefinitely.
+  ///
+  /// If both [untilTime] and [untilCount] are null, execution will repeat indefinitely.
   factory Interval.exponential(
           {required double mean, int? untilTime, int? untilCount}) =>
       ProbabilisticInterval._exponential(
@@ -105,6 +159,14 @@ abstract class Interval {
   ///
   /// Creates a probabilistic interval with a normal distribution based on
   /// the provided [mean] and [stdDev] (standard deviation).
+  ///
+  /// - [untilTime]: The time at which execution should stop. Execution will include events
+  ///   scheduled at this time (inclusive). If null, execution will continue indefinitely.
+  ///
+  /// - [untilCount]: The maximum number of times execution can occur. Execution will include
+  ///   the event that reaches this count (inclusive). If null, execution will continue indefinitely.
+  ///
+  /// If both [untilTime] and [untilCount] are null, execution will repeat indefinitely.
   factory Interval.normal(
           {required double mean,
           required double stdDev,
