@@ -10,7 +10,7 @@ abstract class TimeAction {
 
   void execute();
 
-  int secondaryCompareTo(covariant TimeAction action) {
+  int secondaryCompareTo(TimeAction action) {
     return 0;
   }
 }

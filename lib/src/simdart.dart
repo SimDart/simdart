@@ -7,6 +7,7 @@ import 'package:simdart/src/event.dart';
 import 'package:simdart/src/execution_priority.dart';
 import 'package:simdart/src/internal/event_action.dart';
 import 'package:simdart/src/internal/repeat_event_action.dart';
+import 'package:simdart/src/internal/time_action.dart';
 import 'package:simdart/src/internal/time_loop.dart';
 import 'package:simdart/src/internal/time_loop_mixin.dart';
 import 'package:simdart/src/interval.dart';
@@ -96,6 +97,10 @@ class SimDart with TimeLoopMixin {
   /// Schedules a new event to occur repeatedly based on the specified interval configuration.
   ///
   /// [event] is the function that represents the action to be executed when the event occurs.
+  /// [start] is the absolute time at which the event should occur. If null, the event will
+  /// occur at the [now] simulation time.
+  /// [delay] is the number of time units after the [now] when the event has been scheduled.
+  /// It cannot be provided if [start] is specified.
   /// [interval] defines the timing configuration for the event, including its start time and
   /// the interval between repetitions. The specific details of the interval behavior depend
   /// on the implementation of the [Interval].
@@ -107,20 +112,21 @@ class SimDart with TimeLoopMixin {
   /// containing negative or inconsistent timing values.
   void repeatProcess(
       {required Event event,
+      int? start,
+      int? delay,
       required Interval interval,
       RejectedEventPolicy rejectedEventPolicy =
           RejectedEventPolicy.keepRepeating,
       String? resourceId,
       String? name}) {
-    int? start = interval.nextStart(this);
-    if (start != null) {
-      _process(
-          event: event,
-          start: start,
-          name: name,
-          resourceId: resourceId,
-          interval: interval);
-    }
+    _process(
+        event: event,
+        start: start,
+        delay: delay,
+        name: name,
+        resourceId: resourceId,
+        interval: interval,
+        rejectedEventPolicy: rejectedEventPolicy);
   }
 
   /// Schedules a new event to occur at a specific simulation time or after a delay.
@@ -140,9 +146,38 @@ class SimDart with TimeLoopMixin {
       String? name,
       int? start,
       int? delay}) {
+    _process(
+        event: event,
+        start: start,
+        delay: delay,
+        name: name,
+        resourceId: resourceId,
+        interval: null,
+        rejectedEventPolicy: null);
+  }
+
+  void _process(
+      {required Event event,
+      required int? start,
+      required int? delay,
+      required String? name,
+      required String? resourceId,
+      required Interval? interval,
+      required RejectedEventPolicy? rejectedEventPolicy}) {
     if (start != null && delay != null) {
       throw ArgumentError(
           'Both start and delay cannot be provided at the same time.');
+    }
+
+    if (start != null) {
+      if (start < now) {
+        if (startTimeHandling == StartTimeHandling.throwErrorIfPast) {
+          throw ArgumentError('Event start time cannot be in the past');
+        } else if (startTimeHandling == StartTimeHandling.useNowIfPast) {
+          // Uses the current time if the start time is in the past
+          start = now;
+        }
+      }
     }
 
     if (delay != null) {
@@ -154,32 +189,6 @@ class SimDart with TimeLoopMixin {
 
     start ??= now;
 
-    _process(
-        event: event,
-        start: start,
-        name: name,
-        resourceId: resourceId,
-        interval: null);
-  }
-
-  void _process(
-      {required Event event,
-      required int start,
-      required String? name,
-      required String? resourceId,
-      required Interval? interval,
-      final RejectedEventPolicy? rejectedEventPolicy}) {
-    if (start < now) {
-      if (startTimeHandling == StartTimeHandling.throwErrorIfPast) {
-        throw ArgumentError('Event start time cannot be in the past');
-      } else if (startTimeHandling == StartTimeHandling.useNowIfPast) {
-        // Uses the current time if the start time is in the past
-        start = now;
-      }
-    }
-    if (start < 0) {
-      throw ArgumentError('Event start time cannot be negative.');
-    }
     if (interval != null && rejectedEventPolicy != null) {
       _loop.addAction(RepeatEventAction(
           sim: this,
@@ -237,8 +246,8 @@ enum RejectedEventPolicy {
 /// This class is marked as internal and should only be used within the library.
 @internal
 class SimDartHelper {
-  /// Adds an [EventAction] to the loop.
-  static void addEvent({required SimDart sim, required EventAction action}) {
+  /// Adds an [TimeAction] to the loop.
+  static void addAction({required SimDart sim, required TimeAction action}) {
     sim._loop.addAction(action);
   }
 

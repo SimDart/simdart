@@ -34,11 +34,17 @@ class RepeatEventAction extends TimeAction {
   @override
   void execute() {
     sim.process(event: event, resourceId: resourceId, name: eventName);
-    //TODO next (repeat)
+    int? start = interval.nextStart(sim);
+    if (start != null) {
+      //TODO avoid start = now?
+      this.start = start;
+      SimDartHelper.addAction(sim: sim, action: this);
+    }
+    //TODO rejectedEventPolicy
   }
 
   @override
-  int secondaryCompareTo(RepeatEventAction action) {
+  int secondaryCompareTo(TimeAction action) {
     // Gain priority over event actions
     return -1;
   }

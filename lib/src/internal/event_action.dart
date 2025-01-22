@@ -45,8 +45,8 @@ class EventAction extends TimeAction with EventContext {
   void Function()? _resume;
 
   @override
-  int secondaryCompareTo(EventAction action) {
-    if (secondarySortByName) {
+  int secondaryCompareTo(TimeAction action) {
+    if (secondarySortByName && action is EventAction) {
       return eventName.compareTo(action.eventName);
     }
     return 0;
@@ -107,7 +107,7 @@ class EventAction extends TimeAction with EventContext {
 
     start = sim.now + delay;
     // Adds it back to the loop to be resumed in the future.
-    SimDartHelper.addEvent(sim: sim, action: this);
+    SimDartHelper.addAction(sim: sim, action: this);
 
     final Completer<void> resume = Completer<void>();
     _resume = () {
