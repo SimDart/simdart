@@ -7,18 +7,20 @@ import 'package:simdart/src/event.dart';
 import 'package:simdart/src/execution_priority.dart';
 import 'package:simdart/src/internal/event_action.dart';
 import 'package:simdart/src/internal/event_scheduler_interface.dart';
+import 'package:simdart/src/internal/now_interface.dart';
 import 'package:simdart/src/internal/repeat_event_action.dart';
 import 'package:simdart/src/internal/resource.dart';
 import 'package:simdart/src/internal/time_action.dart';
 import 'package:simdart/src/internal/time_loop.dart';
-import 'package:simdart/src/internal/time_loop_interface.dart';
+import 'package:simdart/src/internal/sim_configuration_interface.dart';
 import 'package:simdart/src/interval.dart';
 import 'package:simdart/src/resource_configurator.dart';
+import 'package:simdart/src/sim_result.dart';
 import 'package:simdart/src/simulation_track.dart';
 import 'package:simdart/src/start_time_handling.dart';
 
 /// Represents a discrete-event simulation engine.
-class SimDart implements TimeLoopInterface, EventSchedulerInterface {
+class SimDart implements SimConfigurationInterface, EventSchedulerInterface,NowInterface  {
   /// Creates a simulation instance.
   ///
   /// - [now]: The starting time of the simulation. Defaults to `0` if null.
@@ -27,8 +29,7 @@ class SimDart implements TimeLoopInterface, EventSchedulerInterface {
   /// - [startTimeHandling]: Determines how to handle events scheduled with a start
   /// time in the past. The default behavior is [StartTimeHandling.throwErrorIfPast].
   ///
-  /// - [onTrack]: The optional callback function that can be used to track the progress
-  /// of the simulation.
+  /// - [includeTracks]: Determines whether simulation tracks should be included in the simulation result.
   ///
   /// - [seed]: The optional parameter used to initialize the random number generator
   /// for deterministic behavior in the simulation. If provided, it ensures that the
@@ -40,21 +41,24 @@ class SimDart implements TimeLoopInterface, EventSchedulerInterface {
   /// - [executionPriority]: Defines the priority of task execution in the simulation.
   SimDart(
       {StartTimeHandling startTimeHandling = StartTimeHandling.throwErrorIfPast,
-      OnTrack? onTrack,
       int? now,
       this.secondarySortByName = false,
+        this.includeTracks=false,
       ExecutionPriority executionPriority = ExecutionPriority.high,
       int? seed})
-      : _onTrack = onTrack,
-        random = Random(seed) {
+      :   random = Random(seed) {
     _loop = TimeLoop(
         now: now,
+        includeTracks: includeTracks,
         beforeRun: _beforeRun,
         executionPriority: executionPriority,
         startTimeHandling: startTimeHandling);
   }
 
   late final TimeLoop _loop;
+
+  @override
+  final bool includeTracks;
 
   /// Determines whether events with the same start time are sorted by their event name.
   ///
@@ -77,11 +81,6 @@ class SimDart implements TimeLoopInterface, EventSchedulerInterface {
   /// instantiate a new `Random` object for each event.
   late final Random random;
 
-  /// A callback function used to track the progress of the simulation.
-  /// If provided, this function will be called with each [SimulationTrack] generated
-  /// during the simulation. This is useful for debugging or logging purposes.
-  final OnTrack? _onTrack;
-
   /// A queue that holds event actions that are waiting for a resource to become available.
   ///
   /// These events were initially denied the resource and are placed in this queue
@@ -101,7 +100,7 @@ class SimDart implements TimeLoopInterface, EventSchedulerInterface {
   ///
   /// - [until]: The time at which execution should stop. Execution will include events
   ///   scheduled at this time (inclusive). If null, execution will continue indefinitely.
-  Future<void> run({int? until}) async {
+  Future<SimResult> run({int? until}) async {
     return _loop.run(until: until);
   }
 
@@ -190,7 +189,6 @@ class SimDart implements TimeLoopInterface, EventSchedulerInterface {
     } else {
       _loop.addAction(EventAction(
           sim: this,
-          onTrack: _onTrack,
           start: start,
           eventName: name,
           event: event,
@@ -201,23 +199,15 @@ class SimDart implements TimeLoopInterface, EventSchedulerInterface {
   }
 
   @override
-  int? get duration => _loop.duration;
-
-  @override
   ExecutionPriority get executionPriority => _loop.executionPriority;
 
   @override
   int get now => _loop.now;
 
-  @override
-  int? get startTime => _loop.startTime;
 
   @override
   StartTimeHandling get startTimeHandling => _loop.startTimeHandling;
 }
-
-/// A function signature for tracking the progress of a simulation.
-typedef OnTrack = void Function(SimulationTrack track);
 
 /// Defines the behavior of the interval after a newly created event has been rejected.
 enum RejectedEventPolicy {
@@ -275,7 +265,7 @@ class SimDartHelper {
     return sim._resources[resourceId];
   }
 
-  static SimulationTrack buildSimulationTrack(
+  static void addSimulationTrack(
       {required SimDart sim,
       required String eventName,
       required Status status}) {
@@ -283,10 +273,10 @@ class SimDartHelper {
     for (Resource resource in sim._resources.values) {
       resourceUsage[resource.id] = resource.queue.length;
     }
-    return SimulationTrack(
+    sim._loop.addTrack(SimulationTrack(
         status: status,
         name: eventName,
         time: sim.now,
-        resourceUsage: resourceUsage);
+        resourceUsage: resourceUsage));
   }
 }

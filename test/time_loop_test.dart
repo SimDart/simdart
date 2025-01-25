@@ -19,6 +19,7 @@ void main() {
   group('TimeLoop', () {
     test('Loop', () async {
       TimeLoop loop = TimeLoop(
+          includeTracks: true,
           now: null,
           executionPriority: ExecutionPriority.high,
           beforeRun: () {},

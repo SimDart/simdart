@@ -1,72 +1,84 @@
 import 'package:simdart/simdart.dart';
+import 'package:simdart/src/sim_result.dart';
 import 'package:test/test.dart';
 
-import 'test_helper.dart';
+import 'track_tester.dart';
+
+Future<void> emptyEvent(EventContext context) async {}
 
 void main() {
   group('Wait', () {
     test('with await', () async {
-      TestHelper helper = TestHelper();
-      helper.sim.process(
+      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+      sim.process(
           event: (context) async {
             await context.wait(10);
           },
           name: 'a');
-      helper.sim.process(event: TestHelper.emptyEvent, start: 5, name: 'b');
-      await helper.sim.run();
-      expect(helper.trackList.length, 3);
-      helper.testTrack(index: 0, name: 'a', status: Status.executed, time: 0);
-      helper.testTrack(index: 1, name: 'b', status: Status.executed, time: 5);
-      helper.testTrack(index: 2, name: 'a', status: Status.resumed, time: 10);
+      sim.process(event: emptyEvent, start: 5, name: 'b');
 
-      helper = TestHelper();
-      helper.sim.process(
+      SimResult result = await sim.run();
+
+      TrackTester tt = TrackTester(result);
+      tt.test(["[0][a][executed]", "[5][b][executed]", "[10][a][resumed]"]);
+    });
+    test('with await 2', () async {
+      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+      sim.process(
           event: (context) async {
             await context.wait(10);
-            helper.sim
-                .process(event: TestHelper.emptyEvent, delay: 1, name: 'c');
+            sim.process(event: emptyEvent, delay: 1, name: 'c');
           },
           start: 0,
           name: 'a');
-      helper.sim.process(event: TestHelper.emptyEvent, delay: 5, name: 'b');
-      await helper.sim.run();
-      expect(helper.trackList.length, 4);
-      helper.testTrack(index: 0, name: 'a', status: Status.executed, time: 0);
-      helper.testTrack(index: 1, name: 'b', status: Status.executed, time: 5);
-      helper.testTrack(index: 2, name: 'a', status: Status.resumed, time: 10);
-      helper.testTrack(index: 3, name: 'c', status: Status.executed, time: 11);
+      sim.process(event: emptyEvent, delay: 5, name: 'b');
+
+      SimResult result = await sim.run();
+
+      TrackTester tt = TrackTester(result);
+      tt.test([
+        "[0][a][executed]",
+        "[5][b][executed]",
+        "[10][a][resumed]",
+        "[11][c][executed]"
+      ]);
     });
 
     test('without await', () async {
-      TestHelper helper = TestHelper();
-      helper.sim.process(
+      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+      sim.process(
           event: (context) async {
             context.wait(10);
           },
           name: 'a');
-      helper.sim.process(event: TestHelper.emptyEvent, start: 5, name: 'b');
-      await helper.sim.run();
-      expect(helper.trackList.length, 3);
-      helper.testTrack(index: 0, name: 'a', status: Status.executed, time: 0);
-      helper.testTrack(index: 1, name: 'b', status: Status.executed, time: 5);
-      helper.testTrack(index: 2, name: 'a', status: Status.resumed, time: 10);
+      sim.process(event: emptyEvent, start: 5, name: 'b');
 
-      helper = TestHelper();
-      helper.sim.process(
+      SimResult result = await sim.run();
+
+      TrackTester tt = TrackTester(result);
+      tt.test(["[0][a][executed]", "[5][b][executed]", "[10][a][resumed]"]);
+    });
+
+    test('without await 2', () async {
+      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+      sim.process(
           event: (context) async {
             context.wait(10);
-            helper.sim
-                .process(event: TestHelper.emptyEvent, delay: 1, name: 'c');
+            sim.process(event: emptyEvent, delay: 1, name: 'c');
           },
           start: 0,
           name: 'a');
-      helper.sim.process(event: TestHelper.emptyEvent, delay: 5, name: 'b');
-      await helper.sim.run();
-      expect(helper.trackList.length, 4);
-      helper.testTrack(index: 0, name: 'a', status: Status.executed, time: 0);
-      helper.testTrack(index: 1, name: 'c', status: Status.executed, time: 1);
-      helper.testTrack(index: 2, name: 'b', status: Status.executed, time: 5);
-      helper.testTrack(index: 3, name: 'a', status: Status.resumed, time: 10);
+      sim.process(event: emptyEvent, delay: 5, name: 'b');
+
+      SimResult result = await sim.run();
+
+      TrackTester tt = TrackTester(result);
+      tt.test([
+        "[0][a][executed]",
+        "[1][c][executed]",
+        "[5][b][executed]",
+        "[10][a][resumed]"
+      ]);
     });
   });
 }

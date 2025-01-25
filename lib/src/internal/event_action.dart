@@ -16,7 +16,6 @@ class EventAction extends TimeAction implements EventContext {
       required String? eventName,
       required this.event,
       required this.resourceId,
-      required this.onTrack,
       required this.onReject,
       required this.secondarySortByName})
       : _sim = sim,
@@ -26,10 +25,6 @@ class EventAction extends TimeAction implements EventContext {
   final String? _eventName;
   String get eventName => _eventName ?? hashCode.toString();
 
-  /// A callback function used to track the progress of the simulation.
-  /// If provided, this function will be called with each [SimulationTrack] generated
-  /// during the simulation. This is useful for debugging or logging purposes.
-  final OnTrack? onTrack;
 
   /// The event to be executed.
   final Event event;
@@ -62,10 +57,12 @@ class EventAction extends TimeAction implements EventContext {
   void execute() {
     final Function()? resume = _resume;
 
+    
+
     if (resume != null) {
-      if (onTrack != null) {
-        onTrack!(SimDartHelper.buildSimulationTrack(
-            sim: _sim, eventName: eventName, status: Status.resumed));
+      if (_sim.includeTracks) {
+        SimDartHelper.addSimulationTrack(
+            sim: _sim, eventName: eventName, status: Status.resumed);
       }
       // Resume the event if it is waiting, otherwise execute its action.
       resume.call();
@@ -78,13 +75,13 @@ class EventAction extends TimeAction implements EventContext {
       _resourceAcquired = resource.acquire(this);
     }
 
-    if (onTrack != null) {
+    if (_sim.includeTracks) {
       Status status = Status.executed;
       if (!_canRun) {
         status = Status.rejected;
       }
-      onTrack!(SimDartHelper.buildSimulationTrack(
-          sim: _sim, eventName: eventName, status: status));
+      SimDartHelper.addSimulationTrack(
+          sim: _sim, eventName: eventName, status: status);
     }
 
     if (_canRun) {

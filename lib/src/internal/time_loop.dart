@@ -3,16 +3,21 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:simdart/src/execution_priority.dart';
+import 'package:simdart/src/internal/now_interface.dart';
+import 'package:simdart/src/internal/sim_result_interface.dart';
 import 'package:simdart/src/internal/time_action.dart';
-import 'package:simdart/src/internal/time_loop_interface.dart';
+import 'package:simdart/src/internal/sim_configuration_interface.dart';
+import 'package:simdart/src/sim_result.dart';
+import 'package:simdart/src/simulation_track.dart';
 import 'package:simdart/src/start_time_handling.dart';
 
 /// Represents the temporal loop in the algorithm, managing the execution of actions at specified times.
 @internal
-class TimeLoop implements TimeLoopInterface {
+class TimeLoop implements SimConfigurationInterface,NowInterface,SimResultInterface  {
   TimeLoop(
       {required int? now,
       required this.beforeRun,
+        required this.includeTracks,
       required this.executionPriority,
       required this.startTimeHandling}) {
     _now = now ?? 0;
@@ -28,6 +33,9 @@ class TimeLoop implements TimeLoopInterface {
   final ExecutionPriority executionPriority;
 
   final Function beforeRun;
+
+  @override
+  final bool  includeTracks;
 
   /// Queue that holds the [TimeAction] instances to be executed at their respective times.
   final PriorityQueue<TimeAction> _actions = PriorityQueue<TimeAction>(
@@ -58,22 +66,24 @@ class TimeLoop implements TimeLoopInterface {
   int get now => _now;
   late int _now;
 
+  List<SimulationTrack>? _tracks;
+
   Completer<void>? _terminator;
 
   /// Runs the simulation, processing actions in chronological order.
-  Future<void> run({int? until}) async {
+  Future<SimResult> run({int? until}) async {
     if (until != null && _now > until) {
       throw ArgumentError('`now` must be less than or equal to `until`.');
     }
     _until = until;
 
     if (_terminator != null) {
-      return;
+      return _buildResult();
     }
     if (_actions.isEmpty) {
       _duration = 0;
       _startTime = 0;
-      return;
+      return _buildResult();
     }
     _duration = null;
     _startTime = null;
@@ -85,6 +95,11 @@ class TimeLoop implements TimeLoopInterface {
     await _terminator?.future;
     _duration = _now - (startTime ?? 0);
     _terminator = null;
+    return _buildResult();
+  }
+
+  SimResult _buildResult(){
+    return SimResult(startTime: startTime, duration: duration, tracks: _tracks);
   }
 
   void _scheduleNextEvent() {
@@ -103,6 +118,11 @@ class TimeLoop implements TimeLoopInterface {
 
   void addAction(TimeAction action) {
     _actions.add(action);
+  }
+
+  void addTrack(SimulationTrack track){
+    _tracks ??= [];
+    _tracks!.add(track);
   }
 
   Future<void> _consumeFirstEvent() async {
