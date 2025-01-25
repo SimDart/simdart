@@ -1,10 +1,11 @@
 import 'package:meta/meta.dart';
 import 'package:simdart/src/execution_priority.dart';
+import 'package:simdart/src/internal/now_interface.dart';
 import 'package:simdart/src/start_time_handling.dart';
 
 /// Represents the temporal loop in the algorithm, managing the execution of actions at specified times.
 @internal
-mixin TimeLoopMixin {
+abstract interface class TimeLoopInterface implements NowInterface {
   /// Specifies how the simulation handles start times in the past.
   StartTimeHandling get startTimeHandling;
 
@@ -32,7 +33,4 @@ mixin TimeLoopMixin {
   ///
   /// The value will be `null` if the duration has not been calculated or set.
   int? get duration;
-
-  /// Gets the current simulation time.
-  int get now;
 }

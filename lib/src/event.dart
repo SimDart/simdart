@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:simdart/src/simdart.dart';
+import 'package:simdart/src/internal/event_scheduler_interface.dart';
 
 /// The event to be executed.
 ///
@@ -12,10 +12,7 @@ typedef Event = void Function(EventContext context);
 ///
 /// Encapsulates the information and state of an event being executed
 /// within the simulation.
-mixin EventContext {
-  /// The simulation instance managing this event.
-  SimDart get sim;
-
+abstract interface class EventContext implements EventSchedulerInterface {
   /// Pauses the execution of the event for the specified [delay] in simulation time.
   ///
   /// The event is re-added to the simulation's event queue and will resume after

@@ -4,12 +4,12 @@ import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:simdart/src/execution_priority.dart';
 import 'package:simdart/src/internal/time_action.dart';
-import 'package:simdart/src/internal/time_loop_mixin.dart';
+import 'package:simdart/src/internal/time_loop_interface.dart';
 import 'package:simdart/src/start_time_handling.dart';
 
 /// Represents the temporal loop in the algorithm, managing the execution of actions at specified times.
 @internal
-class TimeLoop with TimeLoopMixin {
+class TimeLoop implements TimeLoopInterface {
   TimeLoop(
       {required int? now,
       required this.beforeRun,

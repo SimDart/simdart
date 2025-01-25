@@ -2,15 +2,16 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
-import 'package:simdart/src/internal/time_action.dart';
 import 'package:simdart/src/internal/resource.dart';
+import 'package:simdart/src/internal/time_action.dart';
+import 'package:simdart/src/interval.dart';
 import 'package:simdart/src/simdart.dart';
 import 'package:simdart/src/simulation_track.dart';
 
 @internal
-class EventAction extends TimeAction with EventContext {
+class EventAction extends TimeAction implements EventContext {
   EventAction(
-      {required this.sim,
+      {required SimDart sim,
       required super.start,
       required String? eventName,
       required this.event,
@@ -18,7 +19,8 @@ class EventAction extends TimeAction with EventContext {
       required this.onTrack,
       required this.onReject,
       required this.secondarySortByName})
-      : _eventName = eventName;
+      : _sim = sim,
+        _eventName = eventName;
 
   /// The name of the event.
   final String? _eventName;
@@ -34,8 +36,7 @@ class EventAction extends TimeAction with EventContext {
 
   final Function? onReject;
 
-  @override
-  final SimDart sim;
+  final SimDart _sim;
 
   /// The resource id required by the event.
   final String? resourceId;
@@ -64,7 +65,7 @@ class EventAction extends TimeAction with EventContext {
     if (resume != null) {
       if (onTrack != null) {
         onTrack!(SimDartHelper.buildSimulationTrack(
-            sim: sim, eventName: eventName, status: Status.resumed));
+            sim: _sim, eventName: eventName, status: Status.resumed));
       }
       // Resume the event if it is waiting, otherwise execute its action.
       resume.call();
@@ -72,7 +73,7 @@ class EventAction extends TimeAction with EventContext {
     }
 
     Resource? resource =
-        SimDartHelper.getResource(sim: sim, resourceId: resourceId);
+        SimDartHelper.getResource(sim: _sim, resourceId: resourceId);
     if (resource != null) {
       _resourceAcquired = resource.acquire(this);
     }
@@ -83,7 +84,7 @@ class EventAction extends TimeAction with EventContext {
         status = Status.rejected;
       }
       onTrack!(SimDartHelper.buildSimulationTrack(
-          sim: sim, eventName: eventName, status: status));
+          sim: _sim, eventName: eventName, status: status));
     }
 
     if (_canRun) {
@@ -94,12 +95,12 @@ class EventAction extends TimeAction with EventContext {
             _resourceAcquired = false;
           }
           // Event released some resource, others events need retry.
-          SimDartHelper.restoreWaitingEventsForResource(sim: sim);
+          SimDartHelper.restoreWaitingEventsForResource(sim: _sim);
         }
       });
     } else {
       onReject?.call();
-      SimDartHelper.queueOnWaitingForResource(sim: sim, action: this);
+      SimDartHelper.queueOnWaitingForResource(sim: _sim, action: this);
     }
   }
 
@@ -109,9 +110,9 @@ class EventAction extends TimeAction with EventContext {
       return;
     }
 
-    start = sim.now + delay;
+    start = _sim.now + delay;
     // Adds it back to the loop to be resumed in the future.
-    SimDartHelper.addAction(sim: sim, action: this);
+    SimDartHelper.addAction(sim: _sim, action: this);
 
     final Completer<void> resume = Completer<void>();
     _resume = () {
@@ -123,5 +124,43 @@ class EventAction extends TimeAction with EventContext {
 
   Future<void> _runEvent() async {
     return event(this);
+  }
+
+  @override
+  int get now => _sim.now;
+
+  @override
+  void process(
+      {required Event event,
+      String? resourceId,
+      String? name,
+      int? start,
+      int? delay}) {
+    _sim.process(
+        event: event,
+        resourceId: resourceId,
+        name: name,
+        start: start,
+        delay: delay);
+  }
+
+  @override
+  void repeatProcess(
+      {required Event event,
+      int? start,
+      int? delay,
+      required Interval interval,
+      RejectedEventPolicy rejectedEventPolicy =
+          RejectedEventPolicy.keepRepeating,
+      String? resourceId,
+      String? name}) {
+    _sim.repeatProcess(
+        event: event,
+        interval: interval,
+        start: start,
+        delay: delay,
+        rejectedEventPolicy: rejectedEventPolicy,
+        resourceId: resourceId,
+        name: name);
   }
 }
