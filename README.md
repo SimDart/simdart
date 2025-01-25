@@ -90,7 +90,7 @@ void main() async {
 
 void _a(EventContext context) async {
   await context.wait(10);
-  context.sim.process(event: _c, delay: 1, name: 'C');
+  context.process(event: _c, delay: 1, name: 'C');
 }
 
 void _b(EventContext context) async {

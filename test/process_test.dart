@@ -34,8 +34,7 @@ void main() {
       helper = TestHelper();
       helper.sim.process(
           event: (context) async {
-            context.sim
-                .process(event: TestHelper.emptyEvent, delay: 10, name: 'b');
+            context.process(event: TestHelper.emptyEvent, delay: 10, name: 'b');
           },
           start: 5,
           name: 'a');
@@ -47,15 +46,13 @@ void main() {
       helper = TestHelper();
       helper.sim.process(
           event: (context) async {
-            context.sim
-                .process(event: TestHelper.emptyEvent, delay: 10, name: 'b');
+            context.process(event: TestHelper.emptyEvent, delay: 10, name: 'b');
           },
           start: 0,
           name: 'a');
       helper.sim.process(
           event: (context) async {
-            context.sim
-                .process(event: TestHelper.emptyEvent, delay: 2, name: 'd');
+            context.process(event: TestHelper.emptyEvent, delay: 2, name: 'd');
           },
           start: 2,
           name: 'c');

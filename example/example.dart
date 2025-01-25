@@ -10,5 +10,5 @@ void main() async {
 
 void _a(EventContext context) async {
   await context.wait(2);
-  context.sim.process(event: _a, delay: 2, name: 'A');
+  context.process(event: _a, delay: 2, name: 'A');
 }
