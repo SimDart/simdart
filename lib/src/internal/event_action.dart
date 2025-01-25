@@ -25,7 +25,6 @@ class EventAction extends TimeAction implements EventContext {
   final String? _eventName;
   String get eventName => _eventName ?? hashCode.toString();
 
-
   /// The event to be executed.
   final Event event;
 
@@ -56,8 +55,6 @@ class EventAction extends TimeAction implements EventContext {
   @override
   void execute() {
     final Function()? resume = _resume;
-
-    
 
     if (resume != null) {
       if (_sim.includeTracks) {

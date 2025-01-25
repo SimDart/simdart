@@ -13,11 +13,12 @@ import 'package:simdart/src/start_time_handling.dart';
 
 /// Represents the temporal loop in the algorithm, managing the execution of actions at specified times.
 @internal
-class TimeLoop implements SimConfigurationInterface,NowInterface,SimResultInterface  {
+class TimeLoop
+    implements SimConfigurationInterface, NowInterface, SimResultInterface {
   TimeLoop(
       {required int? now,
       required this.beforeRun,
-        required this.includeTracks,
+      required this.includeTracks,
       required this.executionPriority,
       required this.startTimeHandling}) {
     _now = now ?? 0;
@@ -35,7 +36,7 @@ class TimeLoop implements SimConfigurationInterface,NowInterface,SimResultInterf
   final Function beforeRun;
 
   @override
-  final bool  includeTracks;
+  final bool includeTracks;
 
   /// Queue that holds the [TimeAction] instances to be executed at their respective times.
   final PriorityQueue<TimeAction> _actions = PriorityQueue<TimeAction>(
@@ -98,7 +99,7 @@ class TimeLoop implements SimConfigurationInterface,NowInterface,SimResultInterf
     return _buildResult();
   }
 
-  SimResult _buildResult(){
+  SimResult _buildResult() {
     return SimResult(startTime: startTime, duration: duration, tracks: _tracks);
   }
 
@@ -120,7 +121,7 @@ class TimeLoop implements SimConfigurationInterface,NowInterface,SimResultInterf
     _actions.add(action);
   }
 
-  void addTrack(SimulationTrack track){
+  void addTrack(SimulationTrack track) {
     _tracks ??= [];
     _tracks!.add(track);
   }

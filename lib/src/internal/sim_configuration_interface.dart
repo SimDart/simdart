@@ -2,7 +2,6 @@ import 'package:meta/meta.dart';
 import 'package:simdart/src/execution_priority.dart';
 import 'package:simdart/src/start_time_handling.dart';
 
-
 @internal
 abstract interface class SimConfigurationInterface {
   /// Specifies how the simulation handles start times in the past.
@@ -24,7 +23,4 @@ abstract interface class SimConfigurationInterface {
   ///
   /// Default: `false`
   bool get includeTracks;
-
-
-
 }

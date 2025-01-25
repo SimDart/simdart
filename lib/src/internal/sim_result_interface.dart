@@ -3,7 +3,6 @@ import 'package:meta/meta.dart';
 /// Represents the simulation result.
 @internal
 abstract interface class SimResultInterface {
-
   /// The time, in simulated time units, when the simulation started.
   /// This is the moment at which the first event is scheduled to be processed.
   ///

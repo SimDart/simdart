@@ -20,7 +20,11 @@ import 'package:simdart/src/simulation_track.dart';
 import 'package:simdart/src/start_time_handling.dart';
 
 /// Represents a discrete-event simulation engine.
-class SimDart implements SimConfigurationInterface, EventSchedulerInterface,NowInterface  {
+class SimDart
+    implements
+        SimConfigurationInterface,
+        EventSchedulerInterface,
+        NowInterface {
   /// Creates a simulation instance.
   ///
   /// - [now]: The starting time of the simulation. Defaults to `0` if null.
@@ -43,10 +47,10 @@ class SimDart implements SimConfigurationInterface, EventSchedulerInterface,NowI
       {StartTimeHandling startTimeHandling = StartTimeHandling.throwErrorIfPast,
       int? now,
       this.secondarySortByName = false,
-        this.includeTracks=false,
+      this.includeTracks = false,
       ExecutionPriority executionPriority = ExecutionPriority.high,
       int? seed})
-      :   random = Random(seed) {
+      : random = Random(seed) {
     _loop = TimeLoop(
         now: now,
         includeTracks: includeTracks,
@@ -203,7 +207,6 @@ class SimDart implements SimConfigurationInterface, EventSchedulerInterface,NowI
 
   @override
   int get now => _loop.now;
-
 
   @override
   StartTimeHandling get startTimeHandling => _loop.startTimeHandling;
