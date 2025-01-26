@@ -21,7 +21,7 @@ void main() {
       TimeLoop loop = TimeLoop(
           includeTracks: true,
           now: null,
-          executionPriority: ExecutionPriority.high,
+          executionPriorityCounter: 0,
           beforeRun: () {},
           startTimeHandling: StartTimeHandling.throwErrorIfPast);
 

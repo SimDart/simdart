@@ -4,7 +4,6 @@ import 'dart:math';
 
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
-import 'package:simdart/src/execution_priority.dart';
 import 'package:simdart/src/internal/event_action.dart';
 import 'package:simdart/src/internal/event_scheduler_interface.dart';
 import 'package:simdart/src/internal/now_interface.dart';
@@ -48,18 +47,21 @@ class SimDart
       int? now,
       this.secondarySortByName = false,
       this.includeTracks = false,
-      ExecutionPriority executionPriority = ExecutionPriority.high,
+      this.executionPriorityCounter = 0,
       int? seed})
       : random = Random(seed) {
     _loop = TimeLoop(
         now: now,
         includeTracks: includeTracks,
         beforeRun: _beforeRun,
-        executionPriority: executionPriority,
+        executionPriorityCounter: executionPriorityCounter,
         startTimeHandling: startTimeHandling);
   }
 
   late final TimeLoop _loop;
+
+  @override
+  final int executionPriorityCounter;
 
   @override
   final bool includeTracks;
@@ -201,9 +203,6 @@ class SimDart
           secondarySortByName: secondarySortByName));
     }
   }
-
-  @override
-  ExecutionPriority get executionPriority => _loop.executionPriority;
 
   @override
   int get now => _loop.now;

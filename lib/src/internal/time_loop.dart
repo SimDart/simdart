@@ -1,8 +1,8 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
-import 'package:simdart/src/execution_priority.dart';
 import 'package:simdart/src/internal/now_interface.dart';
 import 'package:simdart/src/internal/sim_result_interface.dart';
 import 'package:simdart/src/internal/time_action.dart';
@@ -19,19 +19,18 @@ class TimeLoop
       {required int? now,
       required this.beforeRun,
       required this.includeTracks,
-      required this.executionPriority,
-      required this.startTimeHandling}) {
-    _now = now ?? 0;
-    _priorityScheduler = executionPriority == ExecutionPriority.high
-        ? _highPrioritySchedule
-        : _lowPrioritySchedule;
-  }
+      required int executionPriorityCounter,
+      required this.startTimeHandling})
+      : executionPriorityCounter = math.max(executionPriorityCounter, 0),
+        _now = now ?? 0;
 
   @override
   final StartTimeHandling startTimeHandling;
 
   @override
-  final ExecutionPriority executionPriority;
+  final int executionPriorityCounter;
+
+  int _executionCount = 0;
 
   final Function beforeRun;
 
@@ -56,8 +55,6 @@ class TimeLoop
   @override
   int? get duration => _duration;
   int? _duration;
-
-  late final Function _priorityScheduler;
 
   bool _nextEventScheduled = false;
 
@@ -106,15 +103,14 @@ class TimeLoop
   void _scheduleNextEvent() {
     assert(!_nextEventScheduled, 'Multiple schedules for the next event.');
     _nextEventScheduled = true;
-    _priorityScheduler.call();
-  }
-
-  void _highPrioritySchedule() {
-    Future.microtask(_consumeFirstEvent);
-  }
-
-  void _lowPrioritySchedule() {
-    Future.delayed(Duration.zero, _consumeFirstEvent);
+    if (executionPriorityCounter == 0 ||
+        _executionCount < executionPriorityCounter) {
+      _executionCount++;
+      Future.microtask(_consumeFirstEvent);
+    } else {
+      _executionCount = 0;
+      Future.delayed(Duration.zero, _consumeFirstEvent);
+    }
   }
 
   void addAction(TimeAction action) {

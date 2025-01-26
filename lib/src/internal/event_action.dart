@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
@@ -31,6 +32,9 @@ class EventAction extends TimeAction implements EventContext {
   final Function? onReject;
 
   final SimDart _sim;
+
+  @override
+  Random get random => _sim.random;
 
   /// The resource id required by the event.
   final String? resourceId;
