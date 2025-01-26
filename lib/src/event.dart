@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:simdart/src/internal/event_scheduler_interface.dart';
 
@@ -20,4 +21,9 @@ abstract interface class EventContext implements EventSchedulerInterface {
   ///
   /// Throws an [ArgumentError] if the delay is negative.
   Future<void> wait(int delay);
+
+  /// The instance of the random number generator used across the simulation.
+  /// It is initialized once and reused to improve performance, avoiding the need to
+  /// instantiate a new `Random` object for each event.
+  Random get random;
 }
