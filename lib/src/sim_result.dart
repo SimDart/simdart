@@ -11,10 +11,10 @@ class SimResult implements SimResultInterface {
       : tracks = tracks != null ? UnmodifiableListView(tracks) : null;
 
   @override
-  final int? duration;
+  final int duration;
 
   @override
-  final int? startTime;
+  final int startTime;
 
-  final UnmodifiableListView<SimulationTrack>? tracks;
+  final List<SimulationTrack>? tracks;
 }

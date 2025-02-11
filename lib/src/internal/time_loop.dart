@@ -49,12 +49,12 @@ class TimeLoop
   );
 
   @override
-  int? get startTime => _startTime;
+  int get startTime => _startTime ?? 0;
   int? _startTime;
 
   @override
-  int? get duration => _duration;
-  int? _duration;
+  int get duration => _duration;
+  int _duration = 0;
 
   bool _nextEventScheduled = false;
 
@@ -83,7 +83,7 @@ class TimeLoop
       _startTime = 0;
       return _buildResult();
     }
-    _duration = null;
+    _duration = 0;
     _startTime = null;
 
     beforeRun();
@@ -91,7 +91,7 @@ class TimeLoop
     _terminator = Completer<void>();
     _scheduleNextEvent();
     await _terminator?.future;
-    _duration = _now - (startTime ?? 0);
+    _duration = _now - startTime;
     _terminator = null;
     return _buildResult();
   }
