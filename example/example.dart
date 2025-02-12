@@ -1,5 +1,4 @@
 import 'package:simdart/simdart.dart';
-import 'package:simdart/src/sim_result.dart';
 
 void main() async {
   final SimDart sim = SimDart(includeTracks: true);

@@ -1,6 +1,6 @@
 import 'package:simdart/simdart.dart';
 import 'package:simdart/src/internal/time_action.dart';
-import 'package:simdart/src/internal/time_loop.dart';
+import 'package:simdart/src/simdart.dart';
 import 'package:test/test.dart';
 
 class TestAction extends TimeAction {
@@ -18,23 +18,27 @@ class TestAction extends TimeAction {
 void main() {
   group('TimeLoop', () {
     test('Loop', () async {
-      TimeLoop loop = TimeLoop(
+      SimDart sim = SimDart(
           includeTracks: true,
-          now: null,
-          executionPriorityCounter: 0,
-          beforeRun: () {},
+          executionPriority: 0,
           startTimeHandling: StartTimeHandling.throwErrorIfPast);
 
       List<String> names = [];
 
-      loop.addAction(TestAction(start: 0, name: 'A', names: names));
-      loop.addAction(TestAction(start: 1, name: 'B', names: names));
-      loop.addAction(TestAction(start: 10, name: 'C', names: names));
-      loop.addAction(TestAction(start: 5, name: 'D', names: names));
-      loop.addAction(TestAction(start: 2, name: 'E', names: names));
-      loop.addAction(TestAction(start: 9, name: 'F', names: names));
+      SimDartHelper.addAction(
+          sim: sim, action: TestAction(start: 0, name: 'A', names: names));
+      SimDartHelper.addAction(
+          sim: sim, action: TestAction(start: 1, name: 'B', names: names));
+      SimDartHelper.addAction(
+          sim: sim, action: TestAction(start: 10, name: 'C', names: names));
+      SimDartHelper.addAction(
+          sim: sim, action: TestAction(start: 5, name: 'D', names: names));
+      SimDartHelper.addAction(
+          sim: sim, action: TestAction(start: 2, name: 'E', names: names));
+      SimDartHelper.addAction(
+          sim: sim, action: TestAction(start: 9, name: 'F', names: names));
 
-      await loop.run();
+      await sim.run();
 
       expect(names, ['A', 'B', 'E', 'D', 'F', 'C']);
     });

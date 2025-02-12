@@ -1,5 +1,4 @@
 import 'package:simdart/simdart.dart';
-import 'package:simdart/src/sim_result.dart';
 import 'package:test/expect.dart';
 
 class TrackTester {

@@ -15,10 +15,10 @@ abstract interface class SimConfigurationInterface {
   /// Default: `false`
   bool get includeTracks;
 
-  /// Determines how often `Future.delayed` is used instead of `microtask` during event execution.
+  /// Determines how often `Future.delayed` is used instead of `Future.microtask` during events execution.
   ///
   /// - `0`: Always uses `microtask`.
   /// - `1`: Alternates between `microtask` and `Future.delayed`.
   /// - `N > 1`: Executes `N` events with `microtask` before using `Future.delayed`.
-  int get executionPriorityCounter;
+  int get executionPriority;
 }

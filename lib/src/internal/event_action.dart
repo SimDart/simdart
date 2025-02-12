@@ -3,9 +3,12 @@ import 'dart:math';
 
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
+import 'package:simdart/src/event_context.dart';
 import 'package:simdart/src/internal/resource.dart';
 import 'package:simdart/src/internal/time_action.dart';
 import 'package:simdart/src/interval.dart';
+import 'package:simdart/src/sim_counter.dart';
+import 'package:simdart/src/sim_num.dart';
 import 'package:simdart/src/simdart.dart';
 import 'package:simdart/src/simulation_track.dart';
 
@@ -24,6 +27,7 @@ class EventAction extends TimeAction implements EventContext {
 
   /// The name of the event.
   final String? _eventName;
+
   String get eventName => _eventName ?? hashCode.toString();
 
   /// The event to be executed.
@@ -160,5 +164,15 @@ class EventAction extends TimeAction implements EventContext {
         rejectedEventPolicy: rejectedEventPolicy,
         resourceId: resourceId,
         name: name);
+  }
+
+  @override
+  SimCounter counter(String name) {
+    return SimDartHelper.counter(sim: _sim, name: name);
+  }
+
+  @override
+  SimNum num(String name) {
+    return SimDartHelper.num(sim: _sim, name: name);
   }
 }
