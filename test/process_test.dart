@@ -3,7 +3,7 @@ import 'package:test/test.dart';
 
 import 'track_tester.dart';
 
-Future<void> emptyEvent(EventContext context) async {}
+Future<void> emptyEvent(SimContext context) async {}
 
 void main() {
   group('Process', () {

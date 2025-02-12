@@ -4,11 +4,10 @@ import 'dart:math';
 import 'package:simdart/simdart.dart';
 import 'package:simdart/src/internal/event_scheduler_interface.dart';
 
-/// Represents the context of an event in the simulation.
+/// Represents the context of the simulation.
 ///
-/// Encapsulates the information and state of an event being executed
-/// within the simulation.
-abstract interface class EventContext implements EventSchedulerInterface {
+/// Encapsulates the information and state of the simulation.
+abstract interface class SimContext implements EventSchedulerInterface {
   /// Pauses the execution of the event for the specified [delay] in simulation time.
   ///
   /// The event is re-added to the simulation's event queue and will resume after

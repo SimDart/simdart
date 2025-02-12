@@ -3,7 +3,7 @@ import 'dart:math';
 
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
-import 'package:simdart/src/event_context.dart';
+import 'package:simdart/src/sim_context.dart';
 import 'package:simdart/src/internal/resource.dart';
 import 'package:simdart/src/internal/time_action.dart';
 import 'package:simdart/src/interval.dart';
@@ -13,7 +13,7 @@ import 'package:simdart/src/simdart.dart';
 import 'package:simdart/src/simulation_track.dart';
 
 @internal
-class EventAction extends TimeAction implements EventContext {
+class EventAction extends TimeAction implements SimContext {
   EventAction(
       {required SimDart sim,
       required super.start,

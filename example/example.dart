@@ -12,7 +12,7 @@ void main() async {
   print('duration: ${result.duration}');
 }
 
-void _a(EventContext context) async {
+void _a(SimContext context) async {
   await context.wait(2);
   context.process(event: _a, delay: 2, name: 'A');
 }
