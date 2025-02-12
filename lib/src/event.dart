@@ -1,8 +1,4 @@
-import 'dart:async';
-import 'dart:math';
-
 import 'package:simdart/simdart.dart';
-import 'package:simdart/src/internal/event_scheduler_interface.dart';
 
 /// The event to be executed.
 ///
