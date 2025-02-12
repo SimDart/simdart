@@ -1,6 +1,5 @@
 [![](https://img.shields.io/pub/v/simdart.svg)](https://pub.dev/packages/simdart)
 [![](https://img.shields.io/badge/%F0%9F%91%8D%20and%20%E2%AD%90-are%20free-yellow)](#)
-[![](https://img.shields.io/badge/Under%20Development-blue)](#)
 
 ![](https://simdart.github.io/simdart-assets/simdart-text-128h.png)
 

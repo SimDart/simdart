@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
+import 'package:simdart/src/resources.dart';
 import 'package:simdart/src/sim_context.dart';
 import 'package:simdart/src/internal/resource.dart';
 import 'package:simdart/src/internal/time_action.dart';
@@ -175,4 +176,7 @@ class EventAction extends TimeAction implements SimContext {
   SimNum num(String name) {
     return SimDartHelper.num(sim: _sim, name: name);
   }
+
+  @override
+  Resources get resources => _sim.resources;
 }

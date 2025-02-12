@@ -13,7 +13,7 @@ import 'package:simdart/src/internal/resource.dart';
 import 'package:simdart/src/internal/sim_configuration_interface.dart';
 import 'package:simdart/src/internal/time_action.dart';
 import 'package:simdart/src/interval.dart';
-import 'package:simdart/src/resource_configurator.dart';
+import 'package:simdart/src/resources.dart';
 import 'package:simdart/src/sim_counter.dart';
 import 'package:simdart/src/sim_num.dart';
 import 'package:simdart/src/sim_result.dart';
@@ -64,15 +64,12 @@ class SimDart
   /// remains undefined for events with identical start times.
   final bool secondarySortByName;
 
-  final Map<dynamic, Resource> _resources = {};
   final Map<String, SimNum> _numProperties = {};
   final Map<String, SimCounter> _counterProperties = {};
 
-  /// Holds the configurations for the resources in the simulator.
-  ///
-  /// Once the simulation begins, no new resource configurations can be added to
-  /// this list.
-  final ResourcesConfigurator resources = ResourcesConfigurator();
+  /// Holds the resources in the simulator.
+  final Map<String, Resource> _resources = {};
+  late final Resources resources = ResourcesHelper.build(this);
 
   /// The instance of the random number generator used across the simulation.
   /// It is initialized once and reused to improve performance, avoiding the need to
@@ -123,15 +120,6 @@ class SimDart
 
   Completer<void>? _terminator;
 
-  void _beforeRun() {
-    for (ResourceConfiguration rc
-        in ResourcesConfiguratorHelper.iterable(configurator: resources)) {
-      if (rc is LimitedResourceConfiguration) {
-        _resources[rc.id] = LimitedResource(id: rc.id, capacity: rc.capacity);
-      }
-    }
-  }
-
   /// Runs the simulation, processing events in chronological order.
   ///
   /// - [until]: The time at which execution should stop. Execution will include events
@@ -157,8 +145,6 @@ class SimDart
     }
     _duration = 0;
     _startTime = null;
-
-    _beforeRun();
 
     _terminator = Completer<void>();
     _scheduleNextEvent();
@@ -375,6 +361,13 @@ class SimDartHelper {
   static Resource? getResource(
       {required SimDart sim, required String? resourceId}) {
     return sim._resources[resourceId];
+  }
+
+  static void addResource(
+      {required SimDart sim,
+      required String resourceId,
+      required Resource Function() create}) {
+    sim._resources.putIfAbsent(resourceId, create);
   }
 
   static void addSimulationTrack(

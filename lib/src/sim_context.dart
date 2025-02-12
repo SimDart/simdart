@@ -3,11 +3,13 @@ import 'dart:math';
 
 import 'package:simdart/simdart.dart';
 import 'package:simdart/src/internal/event_scheduler_interface.dart';
+import 'package:simdart/src/internal/now_interface.dart';
 
 /// Represents the context of the simulation.
 ///
 /// Encapsulates the information and state of the simulation.
-abstract interface class SimContext implements EventSchedulerInterface {
+abstract interface class SimContext
+    implements EventSchedulerInterface, NowInterface {
   /// Pauses the execution of the event for the specified [delay] in simulation time.
   ///
   /// The event is re-added to the simulation's event queue and will resume after
@@ -32,4 +34,6 @@ abstract interface class SimContext implements EventSchedulerInterface {
   /// - [name]: The name of the numeric metric. This is used to identify the metric in logs or reports.
   /// - Returns: A new instance of [SimNum].
   SimNum num(String name);
+
+  Resources get resources;
 }

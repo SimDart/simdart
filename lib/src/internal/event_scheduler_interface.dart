@@ -1,11 +1,10 @@
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
-import 'package:simdart/src/internal/now_interface.dart';
 import 'package:simdart/src/interval.dart';
 import 'package:simdart/src/simdart.dart';
 
 @internal
-abstract interface class EventSchedulerInterface implements NowInterface {
+abstract interface class EventSchedulerInterface {
   /// Schedules a new event to occur repeatedly based on the specified interval configuration.
   ///
   /// [event] is the function that represents the action to be executed when the event occurs.
