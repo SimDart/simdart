@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
 import 'package:simdart/src/internal/event_action.dart';
@@ -9,11 +10,12 @@ import 'package:simdart/src/internal/event_scheduler_interface.dart';
 import 'package:simdart/src/internal/now_interface.dart';
 import 'package:simdart/src/internal/repeat_event_action.dart';
 import 'package:simdart/src/internal/resource.dart';
-import 'package:simdart/src/internal/time_action.dart';
-import 'package:simdart/src/internal/time_loop.dart';
 import 'package:simdart/src/internal/sim_configuration_interface.dart';
+import 'package:simdart/src/internal/time_action.dart';
 import 'package:simdart/src/interval.dart';
 import 'package:simdart/src/resource_configurator.dart';
+import 'package:simdart/src/sim_counter.dart';
+import 'package:simdart/src/sim_num.dart';
 import 'package:simdart/src/sim_result.dart';
 import 'package:simdart/src/simulation_track.dart';
 import 'package:simdart/src/start_time_handling.dart';
@@ -43,28 +45,16 @@ class SimDart
   ///
   /// - [executionPriority]: Defines the priority of task execution in the simulation.
   SimDart(
-      {StartTimeHandling startTimeHandling = StartTimeHandling.throwErrorIfPast,
-      int? now,
+      {this.startTimeHandling = StartTimeHandling.throwErrorIfPast,
+      int now = 0,
       this.secondarySortByName = false,
       this.includeTracks = false,
-      this.executionPriorityCounter = 0,
+      this.executionPriority = 0,
       int? seed})
-      : random = Random(seed) {
-    _loop = TimeLoop(
-        now: now,
-        includeTracks: includeTracks,
-        beforeRun: _beforeRun,
-        executionPriorityCounter: executionPriorityCounter,
-        startTimeHandling: startTimeHandling);
-  }
+      : random = Random(seed),
+        _now = now;
 
-  late final TimeLoop _loop;
-
-  @override
-  final int executionPriorityCounter;
-
-  @override
-  final bool includeTracks;
+  bool _hasRun = false;
 
   /// Determines whether events with the same start time are sorted by their event name.
   ///
@@ -75,6 +65,8 @@ class SimDart
   final bool secondarySortByName;
 
   final Map<dynamic, Resource> _resources = {};
+  final Map<String, SimNum> _numProperties = {};
+  final Map<String, SimCounter> _counterProperties = {};
 
   /// Holds the configurations for the resources in the simulator.
   ///
@@ -93,6 +85,44 @@ class SimDart
   /// to await the opportunity to be processed once the resource is released.
   final Queue<EventAction> _waitingForResource = Queue();
 
+  /// Queue that holds the [TimeAction] instances to be executed at their respective times.
+  final PriorityQueue<TimeAction> _actions = PriorityQueue<TimeAction>(
+    (a, b) {
+      final primaryComparison = a.start.compareTo(b.start);
+      if (primaryComparison != 0) {
+        return primaryComparison;
+      }
+      return a.secondaryCompareTo(b);
+    },
+  );
+
+  @override
+  final StartTimeHandling startTimeHandling;
+
+  @override
+  final int executionPriority;
+
+  int _executionCount = 0;
+
+  @override
+  final bool includeTracks;
+
+  int? _startTime;
+
+  int _duration = 0;
+
+  bool _nextEventScheduled = false;
+
+  late int? _until;
+
+  @override
+  int get now => _now;
+  late int _now;
+
+  List<SimulationTrack>? _tracks;
+
+  Completer<void>? _terminator;
+
   void _beforeRun() {
     for (ResourceConfiguration rc
         in ResourcesConfiguratorHelper.iterable(configurator: resources)) {
@@ -107,7 +137,35 @@ class SimDart
   /// - [until]: The time at which execution should stop. Execution will include events
   ///   scheduled at this time (inclusive). If null, execution will continue indefinitely.
   Future<SimResult> run({int? until}) async {
-    return _loop.run(until: until);
+    if (_hasRun) {
+      throw StateError('The simulation has already been run.');
+    }
+
+    _hasRun = true;
+    if (until != null && _now > until) {
+      throw ArgumentError('`now` must be less than or equal to `until`.');
+    }
+    _until = until;
+
+    if (_terminator != null) {
+      return _buildResult();
+    }
+    if (_actions.isEmpty) {
+      _duration = 0;
+      _startTime = 0;
+      return _buildResult();
+    }
+    _duration = 0;
+    _startTime = null;
+
+    _beforeRun();
+
+    _terminator = Completer<void>();
+    _scheduleNextEvent();
+    await _terminator?.future;
+    _duration = _now - (_startTime ?? 0);
+    _terminator = null;
+    return _buildResult();
   }
 
   @override
@@ -184,7 +242,7 @@ class SimDart
     start ??= now;
 
     if (interval != null && rejectedEventPolicy != null) {
-      _loop.addAction(RepeatEventAction(
+      _addAction(RepeatEventAction(
           sim: this,
           rejectedEventPolicy: rejectedEventPolicy,
           start: start,
@@ -193,7 +251,7 @@ class SimDart
           resourceId: resourceId,
           interval: interval));
     } else {
-      _loop.addAction(EventAction(
+      _addAction(EventAction(
           sim: this,
           start: start,
           eventName: name,
@@ -204,11 +262,63 @@ class SimDart
     }
   }
 
-  @override
-  int get now => _loop.now;
+  SimResult _buildResult() {
+    return SimResult(
+        startTime: _startTime ?? 0,
+        duration: _duration,
+        tracks: _tracks,
+        numProperties: _numProperties,
+        counterProperties: _counterProperties);
+  }
 
-  @override
-  StartTimeHandling get startTimeHandling => _loop.startTimeHandling;
+  void _scheduleNextEvent() {
+    assert(!_nextEventScheduled, 'Multiple schedules for the next event.');
+    _nextEventScheduled = true;
+    if (executionPriority == 0 || _executionCount < executionPriority) {
+      _executionCount++;
+      Future.microtask(_consumeFirstEvent);
+    } else {
+      _executionCount = 0;
+      Future.delayed(Duration.zero, _consumeFirstEvent);
+    }
+  }
+
+  void _addAction(TimeAction action) {
+    _actions.add(action);
+  }
+
+  void _addTrack(SimulationTrack track) {
+    _tracks ??= [];
+    _tracks!.add(track);
+  }
+
+  Future<void> _consumeFirstEvent() async {
+    _nextEventScheduled = false;
+    if (_actions.isEmpty) {
+      _terminator?.complete();
+      return;
+    }
+
+    TimeAction action = _actions.removeFirst();
+
+    // Advance the simulation time to the action's start time.
+    if (action.start > now) {
+      _now = action.start;
+      if (_until != null && now > _until!) {
+        _startTime ??= now;
+        _terminator?.complete();
+        return;
+      }
+    } else if (action.start < now) {
+      action.start = now;
+    }
+
+    _startTime ??= now;
+
+    action.execute();
+
+    _scheduleNextEvent();
+  }
 }
 
 /// Defines the behavior of the interval after a newly created event has been rejected.
@@ -248,12 +358,12 @@ class SimDartHelper {
 
   /// Adds an [TimeAction] to the loop.
   static void addAction({required SimDart sim, required TimeAction action}) {
-    sim._loop.addAction(action);
+    sim._addAction(action);
   }
 
   static void restoreWaitingEventsForResource({required SimDart sim}) {
     while (sim._waitingForResource.isNotEmpty) {
-      sim._loop.addAction(sim._waitingForResource.removeFirst());
+      sim._addAction(sim._waitingForResource.removeFirst());
     }
   }
 
@@ -275,10 +385,19 @@ class SimDartHelper {
     for (Resource resource in sim._resources.values) {
       resourceUsage[resource.id] = resource.queue.length;
     }
-    sim._loop.addTrack(SimulationTrack(
+    sim._addTrack(SimulationTrack(
         status: status,
         name: eventName,
         time: sim.now,
         resourceUsage: resourceUsage));
+  }
+
+  static SimCounter counter({required SimDart sim, required String name}) {
+    return sim._counterProperties
+        .putIfAbsent(name, () => SimCounter(name: name));
+  }
+
+  static SimNum num({required SimDart sim, required String name}) {
+    return sim._numProperties.putIfAbsent(name, () => SimNum(name: name));
   }
 }

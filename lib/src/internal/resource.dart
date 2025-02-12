@@ -1,5 +1,5 @@
 import 'package:meta/meta.dart';
-import 'package:simdart/src/event.dart';
+import 'package:simdart/src/event_context.dart';
 
 @internal
 abstract class Resource {
