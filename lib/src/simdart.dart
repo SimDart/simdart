@@ -108,7 +108,7 @@ class SimDart
 
   int _duration = 0;
 
-  bool _nextEventScheduled = false;
+  bool _nextActionScheduled = false;
 
   late int? _until;
 
@@ -147,7 +147,7 @@ class SimDart
     _startTime = null;
 
     _terminator = Completer<void>();
-    _scheduleNextEvent();
+    _scheduleNextAction();
     await _terminator?.future;
     _duration = _now - (_startTime ?? 0);
     _terminator = null;
@@ -257,15 +257,15 @@ class SimDart
         counterProperties: _counterProperties);
   }
 
-  void _scheduleNextEvent() {
-    assert(!_nextEventScheduled, 'Multiple schedules for the next event.');
-    _nextEventScheduled = true;
+  void _scheduleNextAction() {
+    assert(!_nextActionScheduled, 'Multiple schedules for the next action.');
+    _nextActionScheduled = true;
     if (executionPriority == 0 || _executionCount < executionPriority) {
       _executionCount++;
-      Future.microtask(_consumeFirstEvent);
+      Future.microtask(_consumeFirstAction);
     } else {
       _executionCount = 0;
-      Future.delayed(Duration.zero, _consumeFirstEvent);
+      Future.delayed(Duration.zero, _consumeFirstAction);
     }
   }
 
@@ -278,8 +278,8 @@ class SimDart
     _tracks!.add(track);
   }
 
-  Future<void> _consumeFirstEvent() async {
-    _nextEventScheduled = false;
+  Future<void> _consumeFirstAction() async {
+    _nextActionScheduled = false;
     if (_actions.isEmpty) {
       _terminator?.complete();
       return;
@@ -303,7 +303,7 @@ class SimDart
 
     action.execute();
 
-    _scheduleNextEvent();
+    _scheduleNextAction();
   }
 }
 
