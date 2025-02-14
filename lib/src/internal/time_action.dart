@@ -10,6 +10,8 @@ abstract class TimeAction {
 
   void execute();
 
+  Future<void> wait(int delay);
+
   int secondaryCompareTo(TimeAction action) {
     return 0;
   }

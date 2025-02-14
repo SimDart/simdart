@@ -68,4 +68,9 @@ class RepeatEventAction extends TimeAction {
     // Gain priority over event actions
     return -1;
   }
+
+  @override
+  Future<void> wait(int delay) {
+    throw UnimplementedError();
+  }
 }

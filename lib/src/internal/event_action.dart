@@ -1,20 +1,14 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
-import 'package:simdart/src/resources.dart';
-import 'package:simdart/src/sim_context.dart';
 import 'package:simdart/src/internal/resource.dart';
 import 'package:simdart/src/internal/time_action.dart';
-import 'package:simdart/src/interval.dart';
-import 'package:simdart/src/sim_counter.dart';
-import 'package:simdart/src/sim_num.dart';
 import 'package:simdart/src/simdart.dart';
 import 'package:simdart/src/simulation_track.dart';
 
 @internal
-class EventAction extends TimeAction implements SimContext {
+class EventAction extends TimeAction {
   EventAction(
       {required SimDart sim,
       required super.start,
@@ -37,9 +31,6 @@ class EventAction extends TimeAction implements SimContext {
   final Function? onReject;
 
   final SimDart _sim;
-
-  @override
-  Random get random => _sim.random;
 
   /// The resource id required by the event.
   final String? resourceId;
@@ -126,57 +117,6 @@ class EventAction extends TimeAction implements SimContext {
   }
 
   Future<void> _runEvent() async {
-    return event(this);
+    return event(_sim);
   }
-
-  @override
-  int get now => _sim.now;
-
-  @override
-  void process(
-      {required Event event,
-      String? resourceId,
-      String? name,
-      int? start,
-      int? delay}) {
-    _sim.process(
-        event: event,
-        resourceId: resourceId,
-        name: name,
-        start: start,
-        delay: delay);
-  }
-
-  @override
-  void repeatProcess(
-      {required Event event,
-      int? start,
-      int? delay,
-      required Interval interval,
-      RejectedEventPolicy rejectedEventPolicy =
-          RejectedEventPolicy.keepRepeating,
-      String? resourceId,
-      String? name}) {
-    _sim.repeatProcess(
-        event: event,
-        interval: interval,
-        start: start,
-        delay: delay,
-        rejectedEventPolicy: rejectedEventPolicy,
-        resourceId: resourceId,
-        name: name);
-  }
-
-  @override
-  SimCounter counter(String name) {
-    return SimDartHelper.counter(sim: _sim, name: name);
-  }
-
-  @override
-  SimNum num(String name) {
-    return SimDartHelper.num(sim: _sim, name: name);
-  }
-
-  @override
-  Resources get resources => _sim.resources;
 }

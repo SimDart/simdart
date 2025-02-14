@@ -77,11 +77,11 @@ void main() {
       SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
       sim.resources.limited(id: 'r', capacity: 2);
 
-      eventA(SimContext context) async {
-        await context.wait(10);
+      eventA(SimDart sim) async {
+        await sim.wait(10);
       }
 
-      eventB(SimContext context) async {}
+      eventB(SimDart sim) async {}
 
       sim.resources.limited(id: 'resource', capacity: 2);
 

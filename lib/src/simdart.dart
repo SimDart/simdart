@@ -6,8 +6,6 @@ import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
 import 'package:simdart/src/internal/event_action.dart';
-import 'package:simdart/src/internal/event_scheduler_interface.dart';
-import 'package:simdart/src/internal/now_interface.dart';
 import 'package:simdart/src/internal/repeat_event_action.dart';
 import 'package:simdart/src/internal/resource.dart';
 import 'package:simdart/src/internal/sim_configuration_interface.dart';
@@ -21,11 +19,7 @@ import 'package:simdart/src/simulation_track.dart';
 import 'package:simdart/src/start_time_handling.dart';
 
 /// Represents a discrete-event simulation engine.
-class SimDart
-    implements
-        SimConfigurationInterface,
-        EventSchedulerInterface,
-        NowInterface {
+class SimDart implements SimConfigurationInterface {
   /// Creates a simulation instance.
   ///
   /// - [now]: The starting time of the simulation. Defaults to `0` if null.
@@ -112,7 +106,9 @@ class SimDart
 
   late int? _until;
 
-  @override
+  TimeAction? _currentAction;
+
+  /// Gets the current simulation time.
   int get now => _now;
   late int _now;
 
@@ -154,7 +150,51 @@ class SimDart
     return _buildResult();
   }
 
-  @override
+  /// Pauses the execution of the event for the specified [delay] in simulation time.
+  ///
+  /// The event is re-added to the simulation's event queue and will resume after
+  /// the specified delay has passed.
+  ///
+  /// Throws an [ArgumentError] if the delay is negative.
+  Future<void> wait(int delay) async {
+    if (!_hasRun) {
+      throw StateError('The simulation is not running.');
+    }
+    return _currentAction?.wait(delay);
+  }
+
+  /// Creates a new [SimCounter] instance with the given name.
+  ///
+  /// - [name]: The name of the counter. This is used to identify the counter in logs or reports.
+  /// - Returns: A new instance of [SimCounter].
+  SimCounter counter(String name) {
+    return SimDartHelper.counter(sim: this, name: name);
+  }
+
+  /// Creates a new [SimNum] instance with the given name.
+  ///
+  /// - [name]: The name of the numeric metric. This is used to identify the metric in logs or reports.
+  /// - Returns: A new instance of [SimNum].
+  SimNum num(String name) {
+    return SimDartHelper.num(sim: this, name: name);
+  }
+
+  /// Schedules a new event to occur repeatedly based on the specified interval configuration.
+  ///
+  /// [event] is the function that represents the action to be executed when the event occurs.
+  /// [start] is the absolute time at which the event should occur. If null, the event will
+  /// occur at the [now] simulation time.
+  /// [delay] is the number of time units after the [now] when the event has been scheduled.
+  /// It cannot be provided if [start] is specified.
+  /// [interval] defines the timing configuration for the event, including its start time and
+  /// the interval between repetitions. The specific details of the interval behavior depend
+  /// on the implementation of the [Interval].
+  /// [resourceId] is an optional parameter that specifies the ID of the resource required by the event.
+  /// [name] is an optional identifier for the event.
+  /// [rejectedEventPolicy] defines the behavior of the interval after a newly created event has been rejected.
+  ///
+  /// Throws an [ArgumentError] if the provided interval configuration is invalid, such as
+  /// containing negative or inconsistent timing values.
   void repeatProcess(
       {required Event event,
       int? start,
@@ -175,7 +215,17 @@ class SimDart
         rejectedEventPolicy: rejectedEventPolicy);
   }
 
-  @override
+  /// Schedules a new event to occur at a specific simulation time or after a delay.
+  ///
+  /// [event] is the function that represents the action to be executed when the event occurs.
+  /// [start] is the absolute time at which the event should occur. If null, the event will
+  /// occur at the [now] simulation time.
+  /// [delay] is the number of time units after the [now] when the event has been scheduled.
+  /// It cannot be provided if [start] is specified.
+  /// [resourceId] is an optional parameter that specifies the ID of the resource required by the event.
+  /// [name] is an optional identifier for the event.
+  ///
+  /// Throws an [ArgumentError] if both [start] and [delay] are provided or if [delay] is negative.
   void process(
       {required Event event,
       String? resourceId,
@@ -262,10 +312,10 @@ class SimDart
     _nextActionScheduled = true;
     if (executionPriority == 0 || _executionCount < executionPriority) {
       _executionCount++;
-      Future.microtask(_consumeFirstAction);
+      Future.microtask(_consumeNextAction);
     } else {
       _executionCount = 0;
-      Future.delayed(Duration.zero, _consumeFirstAction);
+      Future.delayed(Duration.zero, _consumeNextAction);
     }
   }
 
@@ -278,7 +328,7 @@ class SimDart
     _tracks!.add(track);
   }
 
-  Future<void> _consumeFirstAction() async {
+  Future<void> _consumeNextAction() async {
     _nextActionScheduled = false;
     if (_actions.isEmpty) {
       _terminator?.complete();
@@ -301,6 +351,7 @@ class SimDart
 
     _startTime ??= now;
 
+    _currentAction = action;
     action.execute();
 
     _scheduleNextAction();

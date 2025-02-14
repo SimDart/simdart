@@ -13,6 +13,11 @@ class TestAction extends TimeAction {
   void execute() {
     names.add(name);
   }
+
+  @override
+  Future<void> wait(int delay) {
+    throw UnimplementedError();
+  }
 }
 
 void main() {

@@ -1,20 +1,20 @@
 import 'package:meta/meta.dart';
-import 'package:simdart/src/sim_context.dart';
+import 'package:simdart/src/internal/event_action.dart';
 
 @internal
 abstract class Resource {
   final String id;
   final int capacity;
-  final List<SimContext> queue = [];
-  final bool Function(SimContext context)? acquisitionRule;
+  final List<EventAction> queue = [];
+  final bool Function(EventAction event)? acquisitionRule;
 
-  final List<SimContext> waiting = [];
+  final List<EventAction> waiting = [];
 
   Resource({required this.id, this.capacity = 1, this.acquisitionRule});
 
-  bool acquire(SimContext event);
+  bool acquire(EventAction event);
 
-  void release(SimContext event);
+  void release(EventAction event);
 
   bool isAvailable();
 }
@@ -24,7 +24,7 @@ class LimitedResource extends Resource {
   LimitedResource({required super.id, super.capacity, super.acquisitionRule});
 
   @override
-  bool acquire(SimContext event) {
+  bool acquire(EventAction event) {
     if (acquisitionRule != null && !acquisitionRule!(event)) {
       // waiting.add(event);
       return false;
@@ -39,7 +39,7 @@ class LimitedResource extends Resource {
   }
 
   @override
-  void release(SimContext event) {
+  void release(EventAction event) {
     queue.remove(event);
   }
 

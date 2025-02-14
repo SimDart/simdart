@@ -1,5 +1,4 @@
 export 'src/event.dart';
-export 'src/sim_context.dart';
 export 'src/interval.dart';
 export 'src/observable.dart';
 export 'src/resources.dart' hide ResourcesHelper;
