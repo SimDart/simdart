@@ -12,55 +12,37 @@ class RepeatEventAction extends TimeAction {
       required this.eventName,
       required this.event,
       required this.interval,
-      required this.resourceId,
-      required this.rejectedEventPolicy});
+      required this.stopCondition});
 
   /// The name of the event.
-  final String? eventName;
+  final String Function(int start)? eventName;
 
-  /// Defines the behavior of the interval after a newly created event has been rejected.
-  final RejectedEventPolicy rejectedEventPolicy;
+  final StopCondition? stopCondition;
 
   /// The event to be executed.
   final Event event;
-
-  /// The resource id required by the event.
-  final String? resourceId;
 
   final Interval interval;
 
   final SimDart sim;
 
-  bool _discard = false;
-
   @override
   void execute() {
-    if (_discard) {
-      return;
-    }
     //TODO Run directly without adding to the loop?
-    SimDartHelper.process(
-        sim: sim,
-        event: event,
-        start: null,
-        delay: null,
-        name: eventName,
-        resourceId: resourceId,
-        onReject: rejectedEventPolicy == RejectedEventPolicy.stopRepeating
-            ? _removeFromLoop
-            : null,
-        interval: null,
-        rejectedEventPolicy: null);
-    int? start = interval.nextStart(sim);
-    if (start != null) {
-      //TODO avoid start = now?
-      this.start = start;
-      SimDartHelper.addAction(sim: sim, action: this);
+    sim.process(
+        event: event, name: eventName != null ? eventName!(sim.now) : null);
+    bool repeat = true;
+    if (stopCondition != null) {
+      repeat = stopCondition!(sim);
     }
-  }
-
-  void _removeFromLoop() {
-    _discard = true;
+    if (repeat) {
+      int? start = interval.nextStart(sim);
+      if (start != null) {
+        //TODO avoid start = now?
+        this.start = start;
+        SimDartHelper.addAction(sim: sim, action: this);
+      }
+    }
   }
 
   @override
@@ -71,6 +53,16 @@ class RepeatEventAction extends TimeAction {
 
   @override
   Future<void> wait(int delay) {
-    throw UnimplementedError();
+    throw StateError('Feature not available');
+  }
+
+  @override
+  Future<void> acquireResource(String id) {
+    throw StateError('Feature not available');
+  }
+
+  @override
+  void releaseResource(String id) {
+    throw StateError('Feature not available');
   }
 }

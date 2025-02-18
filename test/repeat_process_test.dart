@@ -10,12 +10,12 @@ void main() {
 
       sim.repeatProcess(
           event: (context) {},
-          name: 'A',
+          name: (start) => 'A$start',
           interval: Interval.fixed(fixedInterval: 1, untilTime: 2));
 
       SimResult result = await sim.run();
       TrackTester tt = TrackTester(result);
-      tt.test(["[0][A][executed]", "[1][A][executed]", "[2][A][executed]"]);
+      tt.test(['[0][A0][called]', '[1][A1][called]', '[2][A2][called]']);
     });
 
     test('Wait', () async {
@@ -25,48 +25,56 @@ void main() {
           event: (context) async {
             await context.wait(1);
           },
-          name: 'A',
+          name: (start) => 'A$start',
           interval: Interval.fixed(fixedInterval: 1, untilTime: 2));
 
       SimResult result = await sim.run();
 
       TrackTester tt = TrackTester(result);
       tt.test([
-        "[0][A][executed]",
-        "[1][A][resumed]",
-        "[1][A][executed]",
-        "[2][A][resumed]",
-        "[2][A][executed]",
-        "[3][A][resumed]"
+        '[0][A0][called]',
+        '[0][A0][yielded]',
+        '[1][A0][resumed]',
+        '[1][A1][called]',
+        '[1][A1][yielded]',
+        '[2][A1][resumed]',
+        '[2][A2][called]',
+        '[2][A2][yielded]',
+        '[3][A2][resumed]'
       ]);
     });
 
-    test('Resource - keep', () async {
+    test('Resource', () async {
       SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
 
       sim.resources.limited(id: 'r');
 
       sim.repeatProcess(
           event: (context) async {
+            await context.resources.acquire('r');
             await context.wait(10);
+            context.resources.release('r');
           },
-          name: 'A',
-          resourceId: 'r',
+          name: (start) => 'A$start',
           interval: Interval.fixed(fixedInterval: 1, untilTime: 2));
 
       SimResult result = await sim.run();
 
       TrackTester tt = TrackTester(result);
       tt.test([
-        "[0][A][executed]",
-        "[1][A][rejected]",
-        "[2][A][rejected]",
-        "[10][A][resumed]",
-        "[10][A][executed]",
-        "[10][A][rejected]",
-        "[20][A][resumed]",
-        "[20][A][executed]",
-        "[30][A][resumed]"
+        '[0][A0][called]',
+        '[0][A0][yielded]',
+        '[1][A1][called]',
+        '[1][A1][yielded]',
+        '[2][A2][called]',
+        '[2][A2][yielded]',
+        '[10][A0][resumed]',
+        '[10][A1][resumed]',
+        '[10][A1][yielded]',
+        '[20][A1][resumed]',
+        '[20][A2][resumed]',
+        '[20][A2][yielded]',
+        '[30][A2][resumed]'
       ]);
     });
 
@@ -77,23 +85,18 @@ void main() {
 
       sim.repeatProcess(
           event: (context) async {
+            await context.resources.acquire('r');
             await context.wait(2);
+            context.resources.release('r');
           },
-          name: 'A',
-          resourceId: 'r',
-          interval: Interval.fixed(fixedInterval: 1, untilTime: 50),
-          rejectedEventPolicy: RejectedEventPolicy.stopRepeating);
+          name: (start) => 'A$start',
+          stopCondition: (s) => !s.resources.isAvailable('r'),
+          interval: Interval.fixed(fixedInterval: 1, untilTime: 50));
 
       SimResult result = await sim.run();
 
       TrackTester tt = TrackTester(result);
-      tt.test([
-        "[0][A][executed]",
-        "[1][A][rejected]",
-        "[2][A][resumed]",
-        "[2][A][executed]",
-        "[4][A][resumed]"
-      ]);
+      tt.test(['[0][A0][called]', '[0][A0][yielded]', '[2][A0][resumed]']);
     });
   });
 }

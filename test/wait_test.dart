@@ -3,7 +3,7 @@ import 'package:test/test.dart';
 
 import 'track_tester.dart';
 
-Future<void> emptyEvent(SimDart sim) async {}
+Future<void> emptyEvent(SimContext context) async {}
 
 void main() {
   group('Wait', () {
@@ -19,7 +19,12 @@ void main() {
       SimResult result = await sim.run();
 
       TrackTester tt = TrackTester(result);
-      tt.test(["[0][a][executed]", "[5][b][executed]", "[10][a][resumed]"]);
+      tt.test([
+        '[0][a][called]',
+        '[0][a][yielded]',
+        '[5][b][called]',
+        '[10][a][resumed]'
+      ]);
     });
     test('with await 2', () async {
       SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
@@ -36,10 +41,11 @@ void main() {
 
       TrackTester tt = TrackTester(result);
       tt.test([
-        "[0][a][executed]",
-        "[5][b][executed]",
-        "[10][a][resumed]",
-        "[11][c][executed]"
+        '[0][a][called]',
+        '[0][a][yielded]',
+        '[5][b][called]',
+        '[10][a][resumed]',
+        '[11][c][called]'
       ]);
     });
 
@@ -55,7 +61,12 @@ void main() {
       SimResult result = await sim.run();
 
       TrackTester tt = TrackTester(result);
-      tt.test(["[0][a][executed]", "[5][b][executed]", "[10][a][resumed]"]);
+      tt.test([
+        '[0][a][called]',
+        '[0][a][yielded]',
+        '[5][b][called]',
+        '[10][a][resumed]'
+      ]);
     });
 
     test('without await 2', () async {
@@ -73,10 +84,11 @@ void main() {
 
       TrackTester tt = TrackTester(result);
       tt.test([
-        "[0][a][executed]",
-        "[1][c][executed]",
-        "[5][b][executed]",
-        "[10][a][resumed]"
+        '[0][a][called]',
+        '[0][a][yielded]',
+        '[1][c][called]',
+        '[5][b][called]',
+        '[10][a][resumed]'
       ]);
     });
   });

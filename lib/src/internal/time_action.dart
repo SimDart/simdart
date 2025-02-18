@@ -12,6 +12,10 @@ abstract class TimeAction {
 
   Future<void> wait(int delay);
 
+  Future<void> acquireResource(String id);
+
+  void releaseResource(String id);
+
   int secondaryCompareTo(TimeAction action) {
     return 0;
   }

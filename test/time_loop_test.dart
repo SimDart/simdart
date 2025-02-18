@@ -18,6 +18,16 @@ class TestAction extends TimeAction {
   Future<void> wait(int delay) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> acquireResource(String id) {
+    throw UnimplementedError();
+  }
+
+  @override
+  void releaseResource(String id) {
+    throw UnimplementedError();
+  }
 }
 
 void main() {

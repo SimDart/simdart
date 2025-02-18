@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 import 'package:simdart/src/internal/event_action.dart';
+import 'package:simdart/src/simdart.dart';
 
 @internal
 abstract class Resource {
@@ -8,13 +9,14 @@ abstract class Resource {
   final List<EventAction> queue = [];
   final bool Function(EventAction event)? acquisitionRule;
 
+  /// A queue that holds event actions that are waiting for a resource to become available.
   final List<EventAction> waiting = [];
 
   Resource({required this.id, this.capacity = 1, this.acquisitionRule});
 
   bool acquire(EventAction event);
 
-  void release(EventAction event);
+  bool release(SimDart sim, EventAction event);
 
   bool isAvailable();
 }
@@ -26,7 +28,6 @@ class LimitedResource extends Resource {
   @override
   bool acquire(EventAction event) {
     if (acquisitionRule != null && !acquisitionRule!(event)) {
-      // waiting.add(event);
       return false;
     }
     if (isAvailable()) {
@@ -34,13 +35,12 @@ class LimitedResource extends Resource {
       return true;
     }
 
-    // waiting.add(event);
     return false;
   }
 
   @override
-  void release(EventAction event) {
-    queue.remove(event);
+  bool release(SimDart sim, EventAction event) {
+    return queue.remove(event);
   }
 
   @override
