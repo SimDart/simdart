@@ -1,7 +1,4 @@
 import 'package:meta/meta.dart';
-import 'package:simdart/src/event.dart';
-import 'package:simdart/src/interval.dart';
-import 'package:simdart/src/simdart.dart';
 
 @internal
 abstract class SimContextInterface {
