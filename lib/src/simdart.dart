@@ -111,6 +111,8 @@ class SimDart implements SimDartInterface {
 
   late int? _until;
 
+  int _eventCount = 0;
+
   @override
   int get now => _now;
   late int _now;
@@ -231,19 +233,24 @@ class SimDart implements SimDartInterface {
   }
 
   void _scheduleNextAction() {
-    assert(!_nextActionScheduled, 'Multiple schedules for the next action.');
-    _nextActionScheduled = true;
-    if (executionPriority == 0 || _executionCount < executionPriority) {
-      _executionCount++;
-      Future.microtask(_consumeNextAction);
-    } else {
-      _executionCount = 0;
-      Future.delayed(Duration.zero, _consumeNextAction);
+    if (!_nextActionScheduled) {
+      _nextActionScheduled = true;
+      if (executionPriority == 0 || _executionCount < executionPriority) {
+        _executionCount++;
+        Future.microtask(_consumeNextAction);
+      } else {
+        _executionCount = 0;
+        Future.delayed(Duration.zero, _consumeNextAction);
+      }
     }
   }
 
   void _addAction(TimeAction action) {
     _actions.add(action);
+    _eventCount++;
+    if (_hasRun) {
+      _scheduleNextAction();
+    }
   }
 
   void _addTrack({required String eventName, required Status status}) {
@@ -262,7 +269,6 @@ class SimDart implements SimDartInterface {
   Future<void> _consumeNextAction() async {
     _nextActionScheduled = false;
     if (_actions.isEmpty) {
-      _terminator?.complete();
       return;
     }
 
@@ -282,9 +288,16 @@ class SimDart implements SimDartInterface {
 
     _startTime ??= now;
 
-    action.execute();
+    action.execute(_checkToFinalize);
 
     _scheduleNextAction();
+  }
+
+  void _checkToFinalize() {
+    _eventCount--;
+    if (_eventCount == 0) {
+      _terminator?.complete();
+    }
   }
 }
 

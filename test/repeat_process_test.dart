@@ -44,6 +44,38 @@ void main() {
       ]);
     });
 
+    test('Resource - acquire and wait', () async {
+      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+
+      sim.resources.limited(id: 'r');
+
+      sim.process(
+          event: (context) async {
+            await context.resources.acquire('r');
+            await context.wait(10);
+            context.resources.release('r');
+          },
+          name: 'A');
+      sim.process(
+          event: (context) async {
+            await context.resources.acquire('r');
+            context.resources.release('r');
+          },
+          name: 'B');
+
+      SimResult result = await sim.run();
+
+      TrackTester tt = TrackTester(result);
+      tt.test([
+        '[0][A][called]',
+        '[0][A][yielded]',
+        '[0][B][called]',
+        '[0][B][yielded]',
+        '[10][A][resumed]',
+        '[10][B][resumed]'
+      ]);
+    });
+
     test('Resource', () async {
       SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
 

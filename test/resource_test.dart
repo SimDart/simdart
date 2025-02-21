@@ -54,27 +54,15 @@ void main() {
       SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
       sim.resources.limited(id: 'r', capacity: 2);
 
-      fA(context) async {
+      event(context) async {
         await context.resources.acquire('r');
         await context.wait(1);
         context.resources.release('r');
       }
 
-      fB(context) async {
-        await context.resources.acquire('r');
-        await context.wait(1);
-        context.resources.release('r');
-      }
-
-      fC(context) async {
-        await context.resources.acquire('r');
-        await context.wait(1);
-        context.resources.release('r');
-      }
-
-      sim.process(event: fA, name: 'A');
-      sim.process(event: fB, name: 'B');
-      sim.process(event: fC, name: 'C');
+      sim.process(event: event, name: 'A');
+      sim.process(event: event, name: 'B');
+      sim.process(event: event, name: 'C');
 
       SimResult result = await sim.run();
 

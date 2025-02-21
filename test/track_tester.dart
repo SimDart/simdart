@@ -15,6 +15,6 @@ class TrackTester {
         list.add(track.toString());
       }
     }
-    expect(tracks, list);
+    expect(list, tracks);
   }
 }

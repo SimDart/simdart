@@ -10,23 +10,9 @@ class TestAction extends TimeAction {
   final List<String> names;
 
   @override
-  void execute() {
+  void execute(void Function() onFinish) {
     names.add(name);
-  }
-
-  @override
-  Future<void> wait(int delay) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> acquireResource(String id) {
-    throw UnimplementedError();
-  }
-
-  @override
-  void releaseResource(String id) {
-    throw UnimplementedError();
+    onFinish.call();
   }
 }
 

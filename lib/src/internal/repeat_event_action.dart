@@ -27,7 +27,7 @@ class RepeatEventAction extends TimeAction {
   final SimDart sim;
 
   @override
-  void execute() {
+  void execute(void Function() onFinish) {
     //TODO Run directly without adding to the loop?
     sim.process(
         event: event, name: eventName != null ? eventName!(sim.now) : null);
@@ -43,26 +43,12 @@ class RepeatEventAction extends TimeAction {
         SimDartHelper.addAction(sim: sim, action: this);
       }
     }
+    onFinish.call();
   }
 
   @override
   int secondaryCompareTo(TimeAction action) {
-    // Gain priority over event actions
+    // Takes priority over other events occurring at the same time
     return -1;
-  }
-
-  @override
-  Future<void> wait(int delay) {
-    throw StateError('Feature not available');
-  }
-
-  @override
-  Future<void> acquireResource(String id) {
-    throw StateError('Feature not available');
-  }
-
-  @override
-  void releaseResource(String id) {
-    throw StateError('Feature not available');
   }
 }

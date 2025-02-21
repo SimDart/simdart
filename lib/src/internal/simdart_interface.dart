@@ -6,7 +6,7 @@ import 'package:simdart/src/sim_num.dart';
 import 'package:simdart/src/simdart.dart';
 
 @internal
-abstract class SimDartInterface {
+abstract interface class SimDartInterface {
   /// Gets the current simulation time.
   int get now;
 

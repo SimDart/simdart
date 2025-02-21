@@ -8,13 +8,7 @@ abstract class TimeAction {
   /// The scheduled start time.
   int start;
 
-  void execute();
-
-  Future<void> wait(int delay);
-
-  Future<void> acquireResource(String id);
-
-  void releaseResource(String id);
+  void execute(void Function() onFinish);
 
   int secondaryCompareTo(TimeAction action) {
     return 0;
