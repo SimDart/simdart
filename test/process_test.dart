@@ -1,70 +1,73 @@
 import 'package:simdart/simdart.dart';
 import 'package:test/test.dart';
 
-import 'test_helper.dart';
+import 'track_tester.dart';
+
+Future<void> emptyEvent(SimContext context) async {}
 
 void main() {
   group('Process', () {
     test('start', () async {
-      TestHelper helper = TestHelper();
-      helper.sim.process(event: TestHelper.emptyEvent, name: 'a');
-      await helper.sim.run();
-      expect(helper.trackList.length, 1);
-      helper.testTrack(index: 0, name: 'a', status: Status.executed, time: 0);
+      SimDart sim = SimDart(includeTracks: true);
+      sim.process(event: emptyEvent, name: 'a');
+      SimResult result = await sim.run();
+      TrackTester tt = TrackTester(result);
+      tt.test(["[0][a][called]"]);
 
-      helper = TestHelper();
-      helper.sim.process(event: TestHelper.emptyEvent, start: 10, name: 'a');
-      await helper.sim.run();
-      expect(helper.trackList.length, 1);
-      helper.testTrack(index: 0, name: 'a', status: Status.executed, time: 10);
+      sim = SimDart(includeTracks: true);
+      sim.process(event: emptyEvent, start: 10, name: 'a');
+      result = await sim.run();
+      tt = TrackTester(result);
+      tt.test(["[10][a][called]"]);
     });
-    test('delay', () async {
-      TestHelper helper = TestHelper();
-      helper.sim.process(event: TestHelper.emptyEvent, delay: 0, name: 'a');
-      await helper.sim.run();
-      expect(helper.trackList.length, 1);
-      helper.testTrack(index: 0, name: 'a', status: Status.executed, time: 0);
-
-      helper = TestHelper();
-      helper.sim.process(event: TestHelper.emptyEvent, delay: 10, name: 'a');
-      await helper.sim.run();
-      expect(helper.trackList.length, 1);
-      helper.testTrack(index: 0, name: 'a', status: Status.executed, time: 10);
-
-      helper = TestHelper();
-      helper.sim.process(
+    test('delay 1', () async {
+      SimDart sim = SimDart(includeTracks: true);
+      sim.process(event: emptyEvent, delay: 0, name: 'a');
+      SimResult result = await sim.run();
+      TrackTester tt = TrackTester(result);
+      tt.test(["[0][a][called]"]);
+    });
+    test('delay 2', () async {
+      SimDart sim = SimDart(includeTracks: true);
+      sim.process(event: emptyEvent, delay: 10, name: 'a');
+      SimResult result = await sim.run();
+      TrackTester tt = TrackTester(result);
+      tt.test(["[10][a][called]"]);
+    });
+    test('delay 3', () async {
+      SimDart sim = SimDart(includeTracks: true);
+      sim.process(
           event: (context) async {
-            context.sim
-                .process(event: TestHelper.emptyEvent, delay: 10, name: 'b');
+            context.process(event: emptyEvent, delay: 10, name: 'b');
           },
           start: 5,
           name: 'a');
-      await helper.sim.run();
-      expect(helper.trackList.length, 2);
-      helper.testTrack(index: 0, name: 'a', status: Status.executed, time: 5);
-      helper.testTrack(index: 1, name: 'b', status: Status.executed, time: 15);
-
-      helper = TestHelper();
-      helper.sim.process(
+      SimResult result = await sim.run();
+      TrackTester tt = TrackTester(result);
+      tt.test(["[5][a][called]", "[15][b][called]"]);
+    });
+    test('delay 4', () async {
+      SimDart sim = SimDart(includeTracks: true);
+      sim.process(
           event: (context) async {
-            context.sim
-                .process(event: TestHelper.emptyEvent, delay: 10, name: 'b');
+            context.process(event: emptyEvent, delay: 10, name: 'b');
           },
           start: 0,
           name: 'a');
-      helper.sim.process(
+      sim.process(
           event: (context) async {
-            context.sim
-                .process(event: TestHelper.emptyEvent, delay: 2, name: 'd');
+            context.process(event: emptyEvent, delay: 2, name: 'd');
           },
           start: 2,
           name: 'c');
-      await helper.sim.run();
-      expect(helper.trackList.length, 4);
-      helper.testTrack(index: 0, name: 'a', status: Status.executed, time: 0);
-      helper.testTrack(index: 1, name: 'c', status: Status.executed, time: 2);
-      helper.testTrack(index: 2, name: 'd', status: Status.executed, time: 4);
-      helper.testTrack(index: 3, name: 'b', status: Status.executed, time: 10);
+      SimResult result = await sim.run();
+      TrackTester tt = TrackTester(result);
+      tt.test([
+        "[0][a][called]",
+        "[2][c][called]",
+        "[4][d][called]",
+        "[10][b][called]"
+      ]);
     });
   });
 }

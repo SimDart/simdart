@@ -1,20 +1,22 @@
 import 'package:meta/meta.dart';
-import 'package:simdart/src/event.dart';
+import 'package:simdart/src/internal/event_action.dart';
+import 'package:simdart/src/simdart.dart';
 
 @internal
 abstract class Resource {
   final String id;
   final int capacity;
-  final List<EventContext> queue = [];
-  final bool Function(EventContext context)? acquisitionRule;
+  final List<EventAction> queue = [];
+  final bool Function(EventAction event)? acquisitionRule;
 
-  final List<EventContext> waiting = [];
+  /// A queue that holds completer to resume events waiting for a resource to become available.
+  final List<EventAction> waiting = [];
 
   Resource({required this.id, this.capacity = 1, this.acquisitionRule});
 
-  bool acquire(EventContext event);
+  bool acquire(EventAction event);
 
-  void release(EventContext event);
+  bool release(SimDart sim, EventAction event);
 
   bool isAvailable();
 }
@@ -24,9 +26,8 @@ class LimitedResource extends Resource {
   LimitedResource({required super.id, super.capacity, super.acquisitionRule});
 
   @override
-  bool acquire(EventContext event) {
+  bool acquire(EventAction event) {
     if (acquisitionRule != null && !acquisitionRule!(event)) {
-      // waiting.add(event);
       return false;
     }
     if (isAvailable()) {
@@ -34,13 +35,12 @@ class LimitedResource extends Resource {
       return true;
     }
 
-    // waiting.add(event);
     return false;
   }
 
   @override
-  void release(EventContext event) {
-    queue.remove(event);
+  bool release(SimDart sim, EventAction event) {
+    return queue.remove(event);
   }
 
   @override

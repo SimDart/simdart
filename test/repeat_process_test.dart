@@ -1,92 +1,134 @@
 import 'package:simdart/simdart.dart';
 import 'package:test/test.dart';
 
-import 'test_helper.dart';
+import 'track_tester.dart';
 
 void main() {
   group('Repeat process', () {
     test('Simple', () async {
-      TestHelper helper = TestHelper();
+      SimDart sim = SimDart(includeTracks: true);
 
-      helper.sim.repeatProcess(
-          event: (context) {},
-          name: 'A',
+      sim.repeatProcess(
+          event: (context) async {},
+          name: (start) => 'A$start',
           interval: Interval.fixed(fixedInterval: 1, untilTime: 2));
 
-      await helper.sim.run();
-      expect(helper.trackList.length, 3);
-      helper.testTrack(index: 0, name: 'A', status: Status.executed, time: 0);
-      helper.testTrack(index: 1, name: 'A', status: Status.executed, time: 1);
-      helper.testTrack(index: 2, name: 'A', status: Status.executed, time: 2);
+      SimResult result = await sim.run();
+      TrackTester tt = TrackTester(result);
+      tt.test(['[0][A0][called]', '[1][A1][called]', '[2][A2][called]']);
     });
 
     test('Wait', () async {
-      TestHelper helper = TestHelper();
+      SimDart sim = SimDart(includeTracks: true);
 
-      helper.sim.repeatProcess(
+      sim.repeatProcess(
           event: (context) async {
             await context.wait(1);
           },
-          name: 'A',
+          name: (start) => 'A$start',
           interval: Interval.fixed(fixedInterval: 1, untilTime: 2));
 
-      await helper.sim.run();
-      expect(helper.trackList.length, 6);
-      helper.testTrack(index: 0, name: 'A', status: Status.executed, time: 0);
-      helper.testTrack(index: 1, name: 'A', status: Status.resumed, time: 1);
-      helper.testTrack(index: 2, name: 'A', status: Status.executed, time: 1);
-      helper.testTrack(index: 3, name: 'A', status: Status.resumed, time: 2);
-      helper.testTrack(index: 4, name: 'A', status: Status.executed, time: 2);
-      helper.testTrack(index: 5, name: 'A', status: Status.resumed, time: 3);
+      SimResult result = await sim.run();
+
+      TrackTester tt = TrackTester(result);
+      tt.test([
+        '[0][A0][called]',
+        '[0][A0][yielded]',
+        '[1][A0][resumed]',
+        '[1][A1][called]',
+        '[1][A1][yielded]',
+        '[2][A1][resumed]',
+        '[2][A2][called]',
+        '[2][A2][yielded]',
+        '[3][A2][resumed]'
+      ]);
     });
 
-    test('Resource - keep', () async {
-      TestHelper helper = TestHelper();
+    test('Resource - acquire and wait', () async {
+      SimDart sim = SimDart(includeTracks: true);
 
-      helper.sim.resources.limited(id: 'r');
+      sim.resources.limited(id: 'r');
 
-      helper.sim.repeatProcess(
+      sim.process(
           event: (context) async {
+            await context.resources.acquire('r');
             await context.wait(10);
+            context.resources.release('r');
           },
-          name: 'A',
-          resourceId: 'r',
+          name: 'A');
+      sim.process(
+          event: (context) async {
+            await context.resources.acquire('r');
+            context.resources.release('r');
+          },
+          name: 'B');
+
+      SimResult result = await sim.run();
+
+      TrackTester tt = TrackTester(result);
+      tt.test([
+        '[0][A][called]',
+        '[0][A][yielded]',
+        '[0][B][called]',
+        '[0][B][yielded]',
+        '[10][A][resumed]',
+        '[10][B][resumed]'
+      ]);
+    });
+
+    test('Resource', () async {
+      SimDart sim = SimDart(includeTracks: true);
+
+      sim.resources.limited(id: 'r');
+
+      sim.repeatProcess(
+          event: (context) async {
+            await context.resources.acquire('r');
+            await context.wait(10);
+            context.resources.release('r');
+          },
+          name: (start) => 'A$start',
           interval: Interval.fixed(fixedInterval: 1, untilTime: 2));
 
-      await helper.sim.run();
-      expect(helper.trackList.length, 9);
-      helper.testTrack(index: 0, name: 'A', status: Status.executed, time: 0);
-      helper.testTrack(index: 1, name: 'A', status: Status.rejected, time: 1);
-      helper.testTrack(index: 2, name: 'A', status: Status.rejected, time: 2);
-      helper.testTrack(index: 3, name: 'A', status: Status.resumed, time: 10);
-      helper.testTrack(index: 4, name: 'A', status: Status.executed, time: 10);
-      helper.testTrack(index: 5, name: 'A', status: Status.rejected, time: 10);
-      helper.testTrack(index: 6, name: 'A', status: Status.resumed, time: 20);
-      helper.testTrack(index: 7, name: 'A', status: Status.executed, time: 20);
-      helper.testTrack(index: 8, name: 'A', status: Status.resumed, time: 30);
+      SimResult result = await sim.run();
+
+      TrackTester tt = TrackTester(result);
+      tt.test([
+        '[0][A0][called]',
+        '[0][A0][yielded]',
+        '[1][A1][called]',
+        '[1][A1][yielded]',
+        '[2][A2][called]',
+        '[2][A2][yielded]',
+        '[10][A0][resumed]',
+        '[10][A1][resumed]',
+        '[10][A1][yielded]',
+        '[20][A1][resumed]',
+        '[20][A2][resumed]',
+        '[20][A2][yielded]',
+        '[30][A2][resumed]'
+      ]);
     });
 
     test('Resource - stop', () async {
-      TestHelper helper = TestHelper();
+      SimDart sim = SimDart(includeTracks: true);
 
-      helper.sim.resources.limited(id: 'r');
+      sim.resources.limited(id: 'r');
 
-      helper.sim.repeatProcess(
+      sim.repeatProcess(
           event: (context) async {
+            await context.resources.acquire('r');
             await context.wait(2);
+            context.resources.release('r');
           },
-          name: 'A',
-          resourceId: 'r',
-          interval: Interval.fixed(fixedInterval: 1, untilTime: 50),
-          rejectedEventPolicy: RejectedEventPolicy.stopRepeating);
+          name: (start) => 'A$start',
+          stopCondition: (s) => !s.resources.isAvailable('r'),
+          interval: Interval.fixed(fixedInterval: 1, untilTime: 50));
 
-      await helper.sim.run();
-      expect(helper.trackList.length, 5);
-      helper.testTrack(index: 0, name: 'A', status: Status.executed, time: 0);
-      helper.testTrack(index: 1, name: 'A', status: Status.rejected, time: 1);
-      helper.testTrack(index: 2, name: 'A', status: Status.resumed, time: 2);
-      helper.testTrack(index: 3, name: 'A', status: Status.executed, time: 2);
-      helper.testTrack(index: 4, name: 'A', status: Status.resumed, time: 4);
+      SimResult result = await sim.run();
+
+      TrackTester tt = TrackTester(result);
+      tt.test(['[0][A0][called]', '[0][A0][yielded]', '[2][A0][resumed]']);
     });
   });
 }

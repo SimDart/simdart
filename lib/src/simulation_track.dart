@@ -26,7 +26,7 @@ class SimulationTrack {
 
   /// Constructor for creating a [SimulationTrack] instance.
   ///
-  /// [status] is the event status (e.g., [Status.executed]).
+  /// [status] is the event status (e.g., [Status.called]).
   /// [name] is the name of the event being processed, can be null.
   /// [time] is the simulation time when the event occurred.
   SimulationTrack(
@@ -47,17 +47,13 @@ class SimulationTrack {
 /// This enumeration is used to track and distinguish different event status
 /// during the lifecycle of the simulation.
 enum Status {
-  /// The event was executed for the first time.
-  executed,
+  /// The event was called for the first time.
+  called,
 
   /// The event was resumed after being paused.
   resumed,
 
-  /// The event was scheduled internally, typically by [EventScheduler].
-  scheduled,
-
-  /// The resource was rejected for the event.
-  rejected;
+  yielded;
 
   /// Returns the string representation of the status.
   @override
