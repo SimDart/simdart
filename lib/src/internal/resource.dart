@@ -10,7 +10,7 @@ abstract class Resource {
   final bool Function(EventAction event)? acquisitionRule;
 
   /// A queue that holds completer to resume events waiting for a resource to become available.
-  final List<Function> waiting = [];
+  final List<EventAction> waiting = [];
 
   Resource({required this.id, this.capacity = 1, this.acquisitionRule});
 

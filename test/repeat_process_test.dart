@@ -6,10 +6,10 @@ import 'track_tester.dart';
 void main() {
   group('Repeat process', () {
     test('Simple', () async {
-      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+      SimDart sim = SimDart(includeTracks: true);
 
       sim.repeatProcess(
-          event: (context) {},
+          event: (context) async {},
           name: (start) => 'A$start',
           interval: Interval.fixed(fixedInterval: 1, untilTime: 2));
 
@@ -19,7 +19,7 @@ void main() {
     });
 
     test('Wait', () async {
-      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+      SimDart sim = SimDart(includeTracks: true);
 
       sim.repeatProcess(
           event: (context) async {
@@ -45,7 +45,7 @@ void main() {
     });
 
     test('Resource - acquire and wait', () async {
-      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+      SimDart sim = SimDart(includeTracks: true);
 
       sim.resources.limited(id: 'r');
 
@@ -77,7 +77,7 @@ void main() {
     });
 
     test('Resource', () async {
-      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+      SimDart sim = SimDart(includeTracks: true);
 
       sim.resources.limited(id: 'r');
 
@@ -111,7 +111,7 @@ void main() {
     });
 
     test('Resource - stop', () async {
-      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+      SimDart sim = SimDart(includeTracks: true);
 
       sim.resources.limited(id: 'r');
 

@@ -23,7 +23,7 @@ void main() {
       expect(now2, 11);
     });
     test('simple', () async {
-      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+      SimDart sim = SimDart(includeTracks: true);
       sim.process(
           event: (context) async {
             await context.wait(10);
@@ -36,7 +36,7 @@ void main() {
       tt.test(['[0][a][called]', '[0][a][yielded]', '[10][a][resumed]']);
     });
     test('with await', () async {
-      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+      SimDart sim = SimDart(includeTracks: true);
       sim.process(
           event: (context) async {
             await context.wait(10);
@@ -55,7 +55,7 @@ void main() {
       ]);
     });
     test('with await 2', () async {
-      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+      SimDart sim = SimDart(includeTracks: true);
       sim.process(
           event: (context) async {
             await context.wait(10);
@@ -77,47 +77,47 @@ void main() {
       ]);
     });
 
-    test('without await', () async {
-      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
-      sim.process(
-          event: (context) async {
-            context.wait(10);
-          },
-          name: 'a');
-      sim.process(event: emptyEvent, start: 5, name: 'b');
+    test('wait without await', () async {
+      expect(
+        () async {
+          SimDart sim = SimDart(includeTracks: true);
+          sim.process(
+              event: (context) async {
+                context.wait(10);
+              },
+              name: 'a');
+          sim.process(event: emptyEvent, start: 5, name: 'b');
 
-      SimResult result = await sim.run();
-
-      TrackTester tt = TrackTester(result);
-      tt.test([
-        '[0][a][called]',
-        '[0][a][yielded]',
-        '[5][b][called]',
-        '[10][a][resumed]'
-      ]);
+          await sim.run();
+        },
+        throwsA(
+          predicate((e) =>
+              e is StateError &&
+              e.message.contains(
+                  "Next event is being scheduled, but the current one is still paused waiting for continuation. Did you forget to use 'await'?")),
+        ),
+      );
     });
 
-    test('without await 2', () async {
-      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
-      sim.process(
-          event: (context) async {
-            context.wait(10);
-            sim.process(event: emptyEvent, delay: 1, name: 'c');
-          },
-          start: 0,
-          name: 'a');
-      sim.process(event: emptyEvent, delay: 5, name: 'b');
-
-      SimResult result = await sim.run();
-
-      TrackTester tt = TrackTester(result);
-      tt.test([
-        '[0][a][called]',
-        '[0][a][yielded]',
-        '[1][c][called]',
-        '[5][b][called]',
-        '[10][a][resumed]'
-      ]);
+    test('multiple wait without await', () async {
+      expect(
+        () async {
+          SimDart sim = SimDart(includeTracks: true);
+          sim.process(
+              event: (context) async {
+                context.wait(10);
+                context.wait(10);
+              },
+              name: 'a');
+          await sim.run();
+        },
+        throwsA(
+          predicate((e) =>
+              e is StateError &&
+              e.message.contains(
+                  "The event is already waiting. Did you forget to use 'await'?")),
+        ),
+      );
     });
   });
 }

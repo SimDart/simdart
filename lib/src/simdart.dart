@@ -41,7 +41,6 @@ class SimDart implements SimDartInterface {
   SimDart(
       {this.startTimeHandling = StartTimeHandling.throwErrorIfPast,
       int now = 0,
-      this.secondarySortByName = false,
       this.includeTracks = false,
       this.executionPriority = 0,
       int? seed})
@@ -49,14 +48,6 @@ class SimDart implements SimDartInterface {
         _now = now;
 
   bool _hasRun = false;
-
-  /// Determines whether events with the same start time are sorted by their event name.
-  ///
-  /// The primary sorting criterion is always the simulated start time (`start`). If
-  /// two events have the same start time, the order between them will be decided by
-  /// their event name when [secondarySortByName] is set to true. If false, the order
-  /// remains undefined for events with identical start times.
-  final bool secondarySortByName;
 
   final Map<String, SimNum> _numProperties = {};
   final Map<String, SimCounter> _counterProperties = {};
@@ -74,11 +65,11 @@ class SimDart implements SimDartInterface {
   /// Queue that holds the [TimeAction] instances to be executed at their respective times.
   final PriorityQueue<TimeAction> _actions = PriorityQueue<TimeAction>(
     (a, b) {
-      final primaryComparison = a.start.compareTo(b.start);
-      if (primaryComparison != 0) {
-        return primaryComparison;
+      final int c = a.start.compareTo(b.start);
+      if (c != 0) {
+        return c;
       }
-      return a.secondaryCompareTo(b);
+      return a.order.compareTo(b.order);
     },
   );
 
@@ -111,8 +102,6 @@ class SimDart implements SimDartInterface {
 
   late int? _until;
 
-  int _eventCount = 0;
-
   @override
   int get now => _now;
   late int _now;
@@ -120,6 +109,8 @@ class SimDart implements SimDartInterface {
   List<SimulationTrack>? _tracks;
 
   Completer<void>? _terminator;
+
+  bool _error = false;
 
   /// Runs the simulation, processing events in chronological order.
   ///
@@ -186,12 +177,8 @@ class SimDart implements SimDartInterface {
   @override
   void process({required Event event, String? name, int? start, int? delay}) {
     start = _calculateEventStart(start: start, delay: delay);
-    _addAction(EventAction(
-        sim: this,
-        start: start,
-        eventName: name,
-        event: event,
-        secondarySortByName: secondarySortByName));
+    _addAction(
+        EventAction(sim: this, start: start, eventName: name, event: event));
   }
 
   int _calculateEventStart({required int? start, required int? delay}) {
@@ -233,6 +220,9 @@ class SimDart implements SimDartInterface {
   }
 
   void _scheduleNextAction() {
+    if (_error) {
+      return;
+    }
     if (!_nextActionScheduled) {
       _nextActionScheduled = true;
       if (executionPriority == 0 || _executionCount < executionPriority) {
@@ -246,11 +236,10 @@ class SimDart implements SimDartInterface {
   }
 
   void _addAction(TimeAction action) {
-    _actions.add(action);
-    _eventCount++;
-    if (_hasRun) {
-      _scheduleNextAction();
+    if (_error) {
+      return;
     }
+    _actions.add(action);
   }
 
   void _addTrack({required String eventName, required Status status}) {
@@ -267,8 +256,12 @@ class SimDart implements SimDartInterface {
   }
 
   Future<void> _consumeNextAction() async {
+    if (_error) {
+      return;
+    }
     _nextActionScheduled = false;
     if (_actions.isEmpty) {
+      _terminator?.complete();
       return;
     }
 
@@ -288,16 +281,7 @@ class SimDart implements SimDartInterface {
 
     _startTime ??= now;
 
-    action.execute(_checkToFinalize);
-
-    _scheduleNextAction();
-  }
-
-  void _checkToFinalize() {
-    _eventCount--;
-    if (_eventCount == 0) {
-      _terminator?.complete();
-    }
+    action.execute();
   }
 }
 
@@ -330,5 +314,16 @@ class SimDartHelper {
       required String eventName,
       required Status status}) {
     sim._addTrack(eventName: eventName, status: status);
+  }
+
+  static void scheduleNextAction({required SimDart sim}) {
+    sim._scheduleNextAction();
+  }
+
+  static void error({required SimDart sim, required String msg}) {
+    sim._error = true;
+    sim._actions.clear();
+    sim._terminator?.completeError(StateError(msg));
+    sim._terminator = null;
   }
 }

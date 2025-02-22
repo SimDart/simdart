@@ -27,7 +27,7 @@ class RepeatEventAction extends TimeAction {
   final SimDart sim;
 
   @override
-  void execute(void Function() onFinish) {
+  void execute() {
     //TODO Run directly without adding to the loop?
     sim.process(
         event: event, name: eventName != null ? eventName!(sim.now) : null);
@@ -43,12 +43,6 @@ class RepeatEventAction extends TimeAction {
         SimDartHelper.addAction(sim: sim, action: this);
       }
     }
-    onFinish.call();
-  }
-
-  @override
-  int secondaryCompareTo(TimeAction action) {
-    // Takes priority over other events occurring at the same time
-    return -1;
+    SimDartHelper.scheduleNextAction(sim: sim);
   }
 }

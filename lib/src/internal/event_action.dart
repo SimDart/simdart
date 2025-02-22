@@ -20,8 +20,7 @@ class EventAction extends TimeAction implements SimContext {
       {required this.sim,
       required super.start,
       required String? eventName,
-      required this.event,
-      required this.secondarySortByName})
+      required this.event})
       : _eventName = eventName;
 
   /// The name of the event.
@@ -35,8 +34,6 @@ class EventAction extends TimeAction implements SimContext {
 
   final SimDart sim;
 
-  final bool secondarySortByName;
-
   @override
   late final ResourcesContext resources = ResourcesContextImpl(sim, this);
 
@@ -47,15 +44,7 @@ class EventAction extends TimeAction implements SimContext {
   EventCompleter? _eventCompleter;
 
   @override
-  int secondaryCompareTo(TimeAction action) {
-    if (secondarySortByName && action is EventAction) {
-      return eventName.compareTo(action.eventName);
-    }
-    return 0;
-  }
-
-  @override
-  void execute(void Function() onFinish) {
+  void execute() {
     if (_eventCompleter != null) {
       throw StateError('This event is yielding');
     }
@@ -65,15 +54,29 @@ class EventAction extends TimeAction implements SimContext {
           sim: sim, eventName: eventName, status: Status.called);
     }
 
-    _runEvent().then((_) => onFinish.call());
+    _runEvent().then((_) {
+      if (_eventCompleter != null) {
+        SimDartHelper.error(
+            sim: sim,
+            msg:
+                "Next event is being scheduled, but the current one is still paused waiting for continuation. Did you forget to use 'await'?");
+        return;
+      }
+      SimDartHelper.scheduleNextAction(sim: sim);
+    });
+  }
+
+  Future<void> _runEvent() async {
+    await event(this);
   }
 
   @override
   Future<void> wait(int delay) async {
     if (_eventCompleter != null) {
-      throw StateError(
-        "The event is already waiting. Did you forget to use 'await'?",
-      );
+      SimDartHelper.error(
+          sim: sim,
+          msg: "The event is already waiting. Did you forget to use 'await'?");
+      return;
     }
 
     if (sim.includeTracks) {
@@ -86,16 +89,22 @@ class EventAction extends TimeAction implements SimContext {
     SimDartHelper.addAction(
         sim: sim,
         action: CompleterAction(
-            start: sim.now + delay, complete: _eventCompleter!.complete));
+            start: sim.now + delay,
+            complete: _eventCompleter!.complete,
+            order: order));
+    SimDartHelper.scheduleNextAction(sim: sim);
 
     await _eventCompleter!.future;
+    _eventCompleter = null;
   }
 
   Future<void> acquireResource(String id) async {
     if (_eventCompleter != null) {
-      throw StateError(
-        "The event is already acquiring a resource. Did you forget to use 'await'?",
-      );
+      SimDartHelper.error(
+          sim: sim,
+          msg:
+              "This event should be waiting for the resource to be released. Did you forget to use 'await'?");
+      return;
     }
     Resource? resource = SimDartHelper.getResource(sim: sim, resourceId: id);
     if (resource != null) {
@@ -106,8 +115,10 @@ class EventAction extends TimeAction implements SimContext {
               sim: sim, eventName: eventName, status: Status.yielded);
         }
         _eventCompleter = EventCompleter(event: this);
-        resource.waiting.add(_eventCompleter!.complete);
+        resource.waiting.add(this);
+        SimDartHelper.scheduleNextAction(sim: sim);
         await _eventCompleter!.future;
+        _eventCompleter = null;
         return await acquireResource(id);
       }
     }
@@ -118,14 +129,19 @@ class EventAction extends TimeAction implements SimContext {
     if (resource != null) {
       if (resource.release(sim, this)) {
         if (resource.waiting.isNotEmpty) {
-          resource.waiting.removeAt(0).call();
+          //resource.waiting.removeAt(0).call();
+          EventAction other = resource.waiting.removeAt(0);
+          // Schedule a complete to resume this event in the future.
+          SimDartHelper.addAction(
+              sim: sim,
+              action: CompleterAction(
+                  start: sim.now,
+                  complete: other._eventCompleter!.complete,
+                  order: other.order));
+          SimDartHelper.scheduleNextAction(sim: sim);
         }
       }
     }
-  }
-
-  Future<void> _runEvent() async {
-    return event(this);
   }
 
   @override
@@ -165,6 +181,7 @@ class EventCompleter {
   EventCompleter({required this.event});
 
   final Completer<void> _completer = Completer();
+
 
   final EventAction event;
 

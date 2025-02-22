@@ -6,7 +6,7 @@ import 'track_tester.dart';
 void main() {
   group('Resource', () {
     test('Capacity 1', () async {
-      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+      SimDart sim = SimDart(includeTracks: true);
       sim.resources.limited(id: 'r');
 
       fA(context) async {
@@ -51,7 +51,7 @@ void main() {
       ]);
     });
     test('Capacity 2', () async {
-      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+      SimDart sim = SimDart(includeTracks: true);
       sim.resources.limited(id: 'r', capacity: 2);
 
       event(context) async {
@@ -75,48 +75,71 @@ void main() {
         '[0][C][called]',
         '[0][C][yielded]',
         '[1][A][resumed]',
+        '[1][B][resumed]',
         '[1][C][resumed]',
         '[1][C][yielded]',
-        '[1][B][resumed]',
         '[2][C][resumed]'
       ]);
     });
     test('Avoid unnecessary re-executing', () async {
-      SimDart sim = SimDart(includeTracks: true, secondarySortByName: true);
+      SimDart sim = SimDart(includeTracks: true);
       sim.resources.limited(id: 'r', capacity: 2);
 
-      eventA(SimContext context) async {
+      eventResource(SimContext context) async {
         await context.resources.acquire('resource');
         await context.wait(10);
         context.resources.release('resource');
       }
 
-      eventB(SimContext context) async {}
+      event(SimContext context) async {}
 
       sim.resources.limited(id: 'resource', capacity: 2);
 
-      sim.process(event: eventA, name: 'A1');
-      sim.process(event: eventA, name: 'A2', start: 1);
-      sim.process(event: eventA, name: 'A3', start: 2);
-      sim.process(event: eventB, name: 'B', start: 3);
+      sim.process(event: eventResource, name: 'A');
+      sim.process(event: eventResource, name: 'B', start: 1);
+      sim.process(event: eventResource, name: 'C', start: 2);
+      sim.process(event: event, name: 'D', start: 3);
 
       SimResult result = await sim.run();
 
       TrackTester tt = TrackTester(result);
       tt.test([
-        '[0][A1][called]',
-        '[0][A1][yielded]',
-        '[1][A2][called]',
-        '[1][A2][yielded]',
-        '[2][A3][called]',
-        '[2][A3][yielded]',
-        '[3][B][called]',
-        '[10][A1][resumed]',
-        '[10][A3][resumed]',
-        '[10][A3][yielded]',
-        '[11][A2][resumed]',
-        '[20][A3][resumed]'
+        '[0][A][called]',
+        '[0][A][yielded]',
+        '[1][B][called]',
+        '[1][B][yielded]',
+        '[2][C][called]',
+        '[2][C][yielded]',
+        '[3][D][called]',
+        '[10][A][resumed]',
+        '[10][C][resumed]',
+        '[10][C][yielded]',
+        '[11][B][resumed]',
+        '[20][C][resumed]'
       ]);
+    });
+    test('without await', () async {
+      expect(
+        () async {
+          SimDart sim = SimDart(includeTracks: true);
+          sim.resources.limited(id: 'r', capacity: 1);
+          sim.process(
+              event: (context) async {
+                context.resources.acquire('r'); // acquired
+                context.resources.acquire('r'); // should await
+                context.resources.acquire('r'); // error
+              },
+              name: 'a');
+          sim.process(event: (context) async {});
+          await sim.run();
+        },
+        throwsA(
+          predicate((e) =>
+              e is StateError &&
+              e.message.contains(
+                  "This event should be waiting for the resource to be released. Did you forget to use 'await'?")),
+        ),
+      );
     });
   });
 }
