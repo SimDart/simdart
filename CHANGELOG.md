@@ -3,6 +3,7 @@
 * Setting to determine how often `Future.delayed` is used instead of `Future.microtask` during event execution to allow GUI refresh.
 * Adding numeric properties and counter.
 * Allow creating new resources during simulation.
+* Methods for acquiring and releasing resources within events.
 
 ## 0.1.0
 
