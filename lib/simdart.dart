@@ -10,4 +10,4 @@ export 'src/sim_result.dart';
 export 'src/sim_num.dart';
 export 'src/sim_property.dart';
 export 'src/sim_counter.dart';
-export 'src/sim_context.dart' hide SimContextHelper;
+export 'src/sim_context.dart';
