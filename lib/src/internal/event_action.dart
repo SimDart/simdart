@@ -182,7 +182,6 @@ class EventCompleter {
 
   final Completer<void> _completer = Completer();
 
-
   final EventAction event;
 
   Future<void> get future => _completer.future;
