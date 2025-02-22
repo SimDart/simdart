@@ -1,13 +1,14 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
-import 'package:simdart/src/resources.dart';
-import 'package:simdart/src/sim_context.dart';
+import 'package:simdart/src/internal/completer_action.dart';
 import 'package:simdart/src/internal/resource.dart';
+import 'package:simdart/src/internal/resources_context_impl.dart';
 import 'package:simdart/src/internal/time_action.dart';
 import 'package:simdart/src/interval.dart';
+import 'package:simdart/src/resources_context.dart';
+import 'package:simdart/src/sim_context.dart';
 import 'package:simdart/src/sim_counter.dart';
 import 'package:simdart/src/sim_num.dart';
 import 'package:simdart/src/simdart.dart';
@@ -16,135 +17,136 @@ import 'package:simdart/src/simulation_track.dart';
 @internal
 class EventAction extends TimeAction implements SimContext {
   EventAction(
-      {required SimDart sim,
+      {required this.sim,
       required super.start,
       required String? eventName,
-      required this.event,
-      required this.resourceId,
-      required this.onReject,
-      required this.secondarySortByName})
-      : _sim = sim,
-        _eventName = eventName;
+      required this.event})
+      : _eventName = eventName;
 
   /// The name of the event.
   final String? _eventName;
 
+  @override
   String get eventName => _eventName ?? hashCode.toString();
 
   /// The event to be executed.
   final Event event;
 
-  final Function? onReject;
-
-  final SimDart _sim;
+  final SimDart sim;
 
   @override
-  Random get random => _sim.random;
+  late final ResourcesContext resources = ResourcesContextImpl(sim, this);
 
-  /// The resource id required by the event.
-  final String? resourceId;
-
-  bool _resourceAcquired = false;
-
-  final bool secondarySortByName;
+  @override
+  int get now => sim.now;
 
   /// Internal handler for resuming a waiting event.
-  void Function()? _resume;
-
-  @override
-  int secondaryCompareTo(TimeAction action) {
-    if (secondarySortByName && action is EventAction) {
-      return eventName.compareTo(action.eventName);
-    }
-    return 0;
-  }
-
-  bool get _canRun => resourceId == null || _resourceAcquired;
+  EventCompleter? _eventCompleter;
 
   @override
   void execute() {
-    final Function()? resume = _resume;
-
-    if (resume != null) {
-      if (_sim.includeTracks) {
-        SimDartHelper.addSimulationTrack(
-            sim: _sim, eventName: eventName, status: Status.resumed);
-      }
-      // Resume the event if it is waiting, otherwise execute its action.
-      resume.call();
-      return;
+    if (_eventCompleter != null) {
+      throw StateError('This event is yielding');
     }
 
-    Resource? resource =
-        SimDartHelper.getResource(sim: _sim, resourceId: resourceId);
-    if (resource != null) {
-      _resourceAcquired = resource.acquire(this);
-    }
-
-    if (_sim.includeTracks) {
-      Status status = Status.executed;
-      if (!_canRun) {
-        status = Status.rejected;
-      }
+    if (sim.includeTracks) {
       SimDartHelper.addSimulationTrack(
-          sim: _sim, eventName: eventName, status: status);
+          sim: sim, eventName: eventName, status: Status.called);
     }
 
-    if (_canRun) {
-      _runEvent().then((_) {
-        if (_resourceAcquired) {
-          if (resource != null) {
-            resource.release(this);
-            _resourceAcquired = false;
-          }
-          // Event released some resource, others events need retry.
-          SimDartHelper.restoreWaitingEventsForResource(sim: _sim);
-        }
-      });
-    } else {
-      onReject?.call();
-      SimDartHelper.queueOnWaitingForResource(sim: _sim, action: this);
-    }
+    _runEvent().then((_) {
+      if (_eventCompleter != null) {
+        SimDartHelper.error(
+            sim: sim,
+            msg:
+                "Next event is being scheduled, but the current one is still paused waiting for continuation. Did you forget to use 'await'?");
+        return;
+      }
+      SimDartHelper.scheduleNextAction(sim: sim);
+    });
+  }
+
+  Future<void> _runEvent() async {
+    await event(this);
   }
 
   @override
   Future<void> wait(int delay) async {
-    if (_resume != null) {
+    if (_eventCompleter != null) {
+      SimDartHelper.error(
+          sim: sim,
+          msg: "The event is already waiting. Did you forget to use 'await'?");
       return;
     }
 
-    start = _sim.now + delay;
-    // Adds it back to the loop to be resumed in the future.
-    SimDartHelper.addAction(sim: _sim, action: this);
+    if (sim.includeTracks) {
+      SimDartHelper.addSimulationTrack(
+          sim: sim, eventName: eventName, status: Status.yielded);
+    }
+    _eventCompleter = EventCompleter(event: this);
 
-    final Completer<void> resume = Completer<void>();
-    _resume = () {
-      resume.complete();
-      _resume = null;
-    };
-    await resume.future;
+    // Schedule a complete to resume this event in the future.
+    SimDartHelper.addAction(
+        sim: sim,
+        action: CompleterAction(
+            start: sim.now + delay,
+            complete: _eventCompleter!.complete,
+            order: order));
+    SimDartHelper.scheduleNextAction(sim: sim);
+
+    await _eventCompleter!.future;
+    _eventCompleter = null;
   }
 
-  Future<void> _runEvent() async {
-    return event(this);
+  Future<void> acquireResource(String id) async {
+    if (_eventCompleter != null) {
+      SimDartHelper.error(
+          sim: sim,
+          msg:
+              "This event should be waiting for the resource to be released. Did you forget to use 'await'?");
+      return;
+    }
+    Resource? resource = SimDartHelper.getResource(sim: sim, resourceId: id);
+    if (resource != null) {
+      bool acquired = resource.acquire(this);
+      if (!acquired) {
+        if (sim.includeTracks) {
+          SimDartHelper.addSimulationTrack(
+              sim: sim, eventName: eventName, status: Status.yielded);
+        }
+        _eventCompleter = EventCompleter(event: this);
+        resource.waiting.add(this);
+        SimDartHelper.scheduleNextAction(sim: sim);
+        await _eventCompleter!.future;
+        _eventCompleter = null;
+        return await acquireResource(id);
+      }
+    }
+  }
+
+  void releaseResource(String id) {
+    Resource? resource = SimDartHelper.getResource(sim: sim, resourceId: id);
+    if (resource != null) {
+      if (resource.release(sim, this)) {
+        if (resource.waiting.isNotEmpty) {
+          //resource.waiting.removeAt(0).call();
+          EventAction other = resource.waiting.removeAt(0);
+          // Schedule a complete to resume this event in the future.
+          SimDartHelper.addAction(
+              sim: sim,
+              action: CompleterAction(
+                  start: sim.now,
+                  complete: other._eventCompleter!.complete,
+                  order: other.order));
+          SimDartHelper.scheduleNextAction(sim: sim);
+        }
+      }
+    }
   }
 
   @override
-  int get now => _sim.now;
-
-  @override
-  void process(
-      {required Event event,
-      String? resourceId,
-      String? name,
-      int? start,
-      int? delay}) {
-    _sim.process(
-        event: event,
-        resourceId: resourceId,
-        name: name,
-        start: start,
-        delay: delay);
+  void process({required Event event, String? name, int? start, int? delay}) {
+    sim.process(event: event, name: name, start: start, delay: delay);
   }
 
   @override
@@ -153,30 +155,43 @@ class EventAction extends TimeAction implements SimContext {
       int? start,
       int? delay,
       required Interval interval,
-      RejectedEventPolicy rejectedEventPolicy =
-          RejectedEventPolicy.keepRepeating,
-      String? resourceId,
-      String? name}) {
-    _sim.repeatProcess(
+      StopCondition? stopCondition,
+      String Function(int start)? name}) {
+    sim.repeatProcess(
         event: event,
-        interval: interval,
         start: start,
         delay: delay,
-        rejectedEventPolicy: rejectedEventPolicy,
-        resourceId: resourceId,
+        interval: interval,
+        stopCondition: stopCondition,
         name: name);
   }
 
   @override
   SimCounter counter(String name) {
-    return SimDartHelper.counter(sim: _sim, name: name);
+    return sim.counter(name);
   }
 
   @override
   SimNum num(String name) {
-    return SimDartHelper.num(sim: _sim, name: name);
+    return sim.num(name);
   }
+}
 
-  @override
-  Resources get resources => _sim.resources;
+class EventCompleter {
+  EventCompleter({required this.event});
+
+  final Completer<void> _completer = Completer();
+
+  final EventAction event;
+
+  Future<void> get future => _completer.future;
+
+  void complete() {
+    if (event.sim.includeTracks) {
+      SimDartHelper.addSimulationTrack(
+          sim: event.sim, eventName: event.eventName, status: Status.resumed);
+    }
+    _completer.complete();
+    event._eventCompleter = null;
+  }
 }

@@ -9,10 +9,12 @@ class TrackTester {
   int get length => result.tracks != null ? result.tracks!.length : 0;
 
   void test(List<String> tracks) {
-    expect(tracks.length, result.tracks?.length);
-    for (int index = 0; index < tracks.length; index++) {
-      SimulationTrack? track = result.tracks?[index];
-      expect(tracks[index], track?.toString());
+    List<String> list = [];
+    if (result.tracks != null) {
+      for (SimulationTrack track in result.tracks!) {
+        list.add(track.toString());
+      }
     }
+    expect(list, tracks);
   }
 }

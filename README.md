@@ -79,7 +79,7 @@ A collection of different interval types used to control event timing in simulat
 import 'package:simdart/simdart.dart';
 
 void main() async {
-  final SimDart sim = SimDart(onTrack: (track) => print(track));
+  final SimDart sim = SimDart();
 
   sim.process(event: _a, name: 'A');
   sim.process(event: _b, start: 5, name: 'B');
@@ -87,28 +87,34 @@ void main() async {
   await sim.run();
 }
 
-void _a(EventContext context) async {
+Future<void> _a(SimContext context) async {
+  print('[${context.now}][${context.eventName}] start');
   await context.wait(10);
   context.process(event: _c, delay: 1, name: 'C');
+  print('[${context.now}][${context.eventName}] end');
 }
 
-void _b(EventContext context) async {
+Future<void> _b(SimContext context) async {
+  print('[${context.now}][${context.eventName}] start');
   await context.wait(1);
+  print('[${context.now}][${context.eventName}] end');
 }
 
-void _c(EventContext context) async {
+Future<void> _c(SimContext context) async {
+  print('[${context.now}][${context.eventName}] start');
   await context.wait(10);
+  print('[${context.now}][${context.eventName}] end');
 }
 ```
 
 Output:
 ```
-[0][A][executed]
-[5][B][executed]
-[6][B][resumed]
-[10][A][resumed]
-[11][C][executed]
-[21][C][resumed]
+[0][A] start
+[5][B] start
+[6][B] end
+[10][A] end
+[11][C] start
+[21][C] end
 ```
 
 ### Resource capacity
@@ -117,35 +123,35 @@ Output:
 import 'package:simdart/simdart.dart';
 
 void main() async {
-  final SimDart sim = SimDart(onTrack: (track) => print(track));
+  final SimDart sim = SimDart();
 
-  sim.resources.limited(id: 'resource', capacity: 2);
+  sim.resources.limited(id: 'resource', capacity: 1);
 
-  sim.process(event: _a, name: 'A1', resourceId: 'resource');
-  sim.process(event: _a, name: 'A2', start: 1, resourceId: 'resource');
-  sim.process(event: _a, name: 'A3', start: 2, resourceId: 'resource');
-  sim.process(event: _b, name: 'B', start: 3);
+  sim.process(event: _eventResource, name: 'A');
+  sim.process(event: _eventResource, name: 'B');
 
   await sim.run();
 }
 
-void _a(EventContext context) async {
+Future<void> _eventResource(SimContext context) async {
+  print('[${context.now}][${context.eventName}] acquiring resource...');
+  await context.resources.acquire('resource');
+  print('[${context.now}][${context.eventName}] resource acquired');
   await context.wait(10);
+  print('[${context.now}][${context.eventName}] releasing resource...');
+  context.resources.release('resource');
 }
 
-void _b(EventContext context) async {}
 ```
 
 Output:
 ```
-[0][A1][executed]
-[1][A2][executed]
-[2][A3][rejected]
-[3][B][executed]
-[10][A1][resumed]
-[10][A3][executed]
-[11][A2][resumed]
-[20][A3][resumed]
+[0][A] acquiring resource...
+[0][A] resource acquired
+[0][B] acquiring resource...
+[10][A] releasing resource...
+[10][B] resource acquired
+[20][B] releasing resource...
 ```
 
 ### Repeating process
@@ -154,23 +160,25 @@ Output:
 import 'package:simdart/simdart.dart';
 
 void main() async {
-  final SimDart sim = SimDart(onTrack: (track) => print(track));
+  final SimDart sim = SimDart();
 
   sim.repeatProcess(
           event: _a,
           start: 1,
-          name: 'A',
+          name: (start) => 'A$start',
           interval: Interval.fixed(fixedInterval: 2, untilTime: 5));
 
   await sim.run();
 }
 
-void _a(EventContext context) async {}
+Future<void> _a(SimContext context) async {
+  print('[${context.now}][${context.eventName}]');
+}
 ```
 
 Output:
 ```
-[1][A][executed]
-[3][A][executed]
-[5][A][executed]
+[1][A1]
+[3][A3]
+[5][A5]
 ```

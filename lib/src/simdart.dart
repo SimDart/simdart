@@ -1,16 +1,14 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
 import 'package:simdart/src/internal/event_action.dart';
-import 'package:simdart/src/internal/event_scheduler_interface.dart';
-import 'package:simdart/src/internal/now_interface.dart';
 import 'package:simdart/src/internal/repeat_event_action.dart';
 import 'package:simdart/src/internal/resource.dart';
-import 'package:simdart/src/internal/sim_configuration_interface.dart';
+import 'package:simdart/src/internal/resources_impl.dart';
+import 'package:simdart/src/internal/simdart_interface.dart';
 import 'package:simdart/src/internal/time_action.dart';
 import 'package:simdart/src/interval.dart';
 import 'package:simdart/src/resources.dart';
@@ -21,11 +19,7 @@ import 'package:simdart/src/simulation_track.dart';
 import 'package:simdart/src/start_time_handling.dart';
 
 /// Represents a discrete-event simulation engine.
-class SimDart
-    implements
-        SimConfigurationInterface,
-        EventSchedulerInterface,
-        NowInterface {
+class SimDart implements SimDartInterface {
   /// Creates a simulation instance.
   ///
   /// - [now]: The starting time of the simulation. Defaults to `0` if null.
@@ -47,7 +41,6 @@ class SimDart
   SimDart(
       {this.startTimeHandling = StartTimeHandling.throwErrorIfPast,
       int now = 0,
-      this.secondarySortByName = false,
       this.includeTracks = false,
       this.executionPriority = 0,
       int? seed})
@@ -56,59 +49,56 @@ class SimDart
 
   bool _hasRun = false;
 
-  /// Determines whether events with the same start time are sorted by their event name.
-  ///
-  /// The primary sorting criterion is always the simulated start time (`start`). If
-  /// two events have the same start time, the order between them will be decided by
-  /// their event name when [secondarySortByName] is set to true. If false, the order
-  /// remains undefined for events with identical start times.
-  final bool secondarySortByName;
-
   final Map<String, SimNum> _numProperties = {};
   final Map<String, SimCounter> _counterProperties = {};
 
   /// Holds the resources in the simulator.
   final Map<String, Resource> _resources = {};
-  late final Resources resources = ResourcesHelper.build(this);
+
+  late final Resources resources = ResourcesImpl(this);
 
   /// The instance of the random number generator used across the simulation.
   /// It is initialized once and reused to improve performance, avoiding the need to
   /// instantiate a new `Random` object for each event.
   late final Random random;
 
-  /// A queue that holds event actions that are waiting for a resource to become available.
-  ///
-  /// These events were initially denied the resource and are placed in this queue
-  /// to await the opportunity to be processed once the resource is released.
-  final Queue<EventAction> _waitingForResource = Queue();
-
   /// Queue that holds the [TimeAction] instances to be executed at their respective times.
   final PriorityQueue<TimeAction> _actions = PriorityQueue<TimeAction>(
     (a, b) {
-      final primaryComparison = a.start.compareTo(b.start);
-      if (primaryComparison != 0) {
-        return primaryComparison;
+      final int c = a.start.compareTo(b.start);
+      if (c != 0) {
+        return c;
       }
-      return a.secondaryCompareTo(b);
+      return a.order.compareTo(b.order);
     },
   );
 
-  @override
+  /// Specifies how the simulation handles start times in the past.
   final StartTimeHandling startTimeHandling;
 
-  @override
+  /// Determines how often `Future.delayed` is used instead of `Future.microtask` during events execution.
+  ///
+  /// - `0`: Always uses `microtask`.
+  /// - `1`: Alternates between `microtask` and `Future.delayed`.
+  /// - `N > 1`: Executes `N` events with `microtask` before using `Future.delayed`.
   final int executionPriority;
 
   int _executionCount = 0;
 
-  @override
+  /// Determines whether simulation tracks should be included in the simulation result.
+  ///
+  /// When set to `true`, the simulation will collect and return a list of [SimulationTrack]
+  /// objects as part of its result. If set to `false`, the tracks will not be collected,
+  /// and the list will be `null`.
+  ///
+  /// Default: `false`
   final bool includeTracks;
 
   int? _startTime;
 
   int _duration = 0;
 
-  bool _nextEventScheduled = false;
+  bool _nextActionScheduled = false;
 
   late int? _until;
 
@@ -119,6 +109,8 @@ class SimDart
   List<SimulationTrack>? _tracks;
 
   Completer<void>? _terminator;
+
+  bool _error = false;
 
   /// Runs the simulation, processing events in chronological order.
   ///
@@ -147,11 +139,21 @@ class SimDart
     _startTime = null;
 
     _terminator = Completer<void>();
-    _scheduleNextEvent();
+    _scheduleNextAction();
     await _terminator?.future;
     _duration = _now - (_startTime ?? 0);
     _terminator = null;
     return _buildResult();
+  }
+
+  @override
+  SimCounter counter(String name) {
+    return _counterProperties.putIfAbsent(name, () => SimCounter(name: name));
+  }
+
+  @override
+  SimNum num(String name) {
+    return _numProperties.putIfAbsent(name, () => SimNum(name: name));
   }
 
   @override
@@ -160,48 +162,26 @@ class SimDart
       int? start,
       int? delay,
       required Interval interval,
-      RejectedEventPolicy rejectedEventPolicy =
-          RejectedEventPolicy.keepRepeating,
-      String? resourceId,
-      String? name}) {
-    _process(
-        event: event,
+      StopCondition? stopCondition,
+      String Function(int start)? name}) {
+    start = _calculateEventStart(start: start, delay: delay);
+    _addAction(RepeatEventAction(
+        sim: this,
         start: start,
-        delay: delay,
-        name: name,
-        resourceId: resourceId,
-        onReject: null,
+        eventName: name,
+        event: event,
         interval: interval,
-        rejectedEventPolicy: rejectedEventPolicy);
+        stopCondition: stopCondition));
   }
 
   @override
-  void process(
-      {required Event event,
-      String? resourceId,
-      String? name,
-      int? start,
-      int? delay}) {
-    _process(
-        event: event,
-        start: start,
-        delay: delay,
-        name: name,
-        resourceId: resourceId,
-        onReject: null,
-        interval: null,
-        rejectedEventPolicy: null);
+  void process({required Event event, String? name, int? start, int? delay}) {
+    start = _calculateEventStart(start: start, delay: delay);
+    _addAction(
+        EventAction(sim: this, start: start, eventName: name, event: event));
   }
 
-  void _process(
-      {required Event event,
-      required int? start,
-      required int? delay,
-      required String? name,
-      required String? resourceId,
-      required Function? onReject,
-      required Interval? interval,
-      required RejectedEventPolicy? rejectedEventPolicy}) {
+  int _calculateEventStart({required int? start, required int? delay}) {
     if (start != null && delay != null) {
       throw ArgumentError(
           'Both start and delay cannot be provided at the same time.');
@@ -227,25 +207,7 @@ class SimDart
 
     start ??= now;
 
-    if (interval != null && rejectedEventPolicy != null) {
-      _addAction(RepeatEventAction(
-          sim: this,
-          rejectedEventPolicy: rejectedEventPolicy,
-          start: start,
-          eventName: name,
-          event: event,
-          resourceId: resourceId,
-          interval: interval));
-    } else {
-      _addAction(EventAction(
-          sim: this,
-          start: start,
-          eventName: name,
-          event: event,
-          resourceId: resourceId,
-          onReject: onReject,
-          secondarySortByName: secondarySortByName));
-    }
+    return start;
   }
 
   SimResult _buildResult() {
@@ -257,29 +219,47 @@ class SimDart
         counterProperties: _counterProperties);
   }
 
-  void _scheduleNextEvent() {
-    assert(!_nextEventScheduled, 'Multiple schedules for the next event.');
-    _nextEventScheduled = true;
-    if (executionPriority == 0 || _executionCount < executionPriority) {
-      _executionCount++;
-      Future.microtask(_consumeFirstEvent);
-    } else {
-      _executionCount = 0;
-      Future.delayed(Duration.zero, _consumeFirstEvent);
+  void _scheduleNextAction() {
+    if (_error) {
+      return;
+    }
+    if (!_nextActionScheduled) {
+      _nextActionScheduled = true;
+      if (executionPriority == 0 || _executionCount < executionPriority) {
+        _executionCount++;
+        Future.microtask(_consumeNextAction);
+      } else {
+        _executionCount = 0;
+        Future.delayed(Duration.zero, _consumeNextAction);
+      }
     }
   }
 
   void _addAction(TimeAction action) {
+    if (_error) {
+      return;
+    }
     _actions.add(action);
   }
 
-  void _addTrack(SimulationTrack track) {
+  void _addTrack({required String eventName, required Status status}) {
+    Map<String, int> resourceUsage = {};
+    for (Resource resource in _resources.values) {
+      resourceUsage[resource.id] = resource.queue.length;
+    }
     _tracks ??= [];
-    _tracks!.add(track);
+    _tracks!.add(SimulationTrack(
+        status: status,
+        name: eventName,
+        time: now,
+        resourceUsage: resourceUsage));
   }
 
-  Future<void> _consumeFirstEvent() async {
-    _nextEventScheduled = false;
+  Future<void> _consumeNextAction() async {
+    if (_error) {
+      return;
+    }
+    _nextActionScheduled = false;
     if (_actions.isEmpty) {
       _terminator?.complete();
       return;
@@ -302,60 +282,19 @@ class SimDart
     _startTime ??= now;
 
     action.execute();
-
-    _scheduleNextEvent();
   }
 }
 
-/// Defines the behavior of the interval after a newly created event has been rejected.
-enum RejectedEventPolicy {
-  /// Continues the repetition of the event at the specified intervals, even after the event was rejected.
-  keepRepeating,
-
-  /// Stops the repetition of the event entirely after it has been rejected.
-  stopRepeating
-}
+typedef StopCondition = bool Function(SimDart sim);
 
 /// A helper class to access private members of the [SimDart] class.
 ///
 /// This class is marked as internal and should only be used within the library.
 @internal
 class SimDartHelper {
-  static void process(
-      {required SimDart sim,
-      required Event event,
-      required int? start,
-      required int? delay,
-      required String? name,
-      required String? resourceId,
-      required Function? onReject,
-      required Interval? interval,
-      required RejectedEventPolicy? rejectedEventPolicy}) {
-    sim._process(
-        event: event,
-        start: start,
-        delay: delay,
-        name: name,
-        resourceId: resourceId,
-        onReject: onReject,
-        interval: interval,
-        rejectedEventPolicy: rejectedEventPolicy);
-  }
-
   /// Adds an [TimeAction] to the loop.
   static void addAction({required SimDart sim, required TimeAction action}) {
     sim._addAction(action);
-  }
-
-  static void restoreWaitingEventsForResource({required SimDart sim}) {
-    while (sim._waitingForResource.isNotEmpty) {
-      sim._addAction(sim._waitingForResource.removeFirst());
-    }
-  }
-
-  static void queueOnWaitingForResource(
-      {required SimDart sim, required EventAction action}) {
-    sim._waitingForResource.add(action);
   }
 
   static Resource? getResource(
@@ -374,23 +313,17 @@ class SimDartHelper {
       {required SimDart sim,
       required String eventName,
       required Status status}) {
-    Map<String, int> resourceUsage = {};
-    for (Resource resource in sim._resources.values) {
-      resourceUsage[resource.id] = resource.queue.length;
-    }
-    sim._addTrack(SimulationTrack(
-        status: status,
-        name: eventName,
-        time: sim.now,
-        resourceUsage: resourceUsage));
+    sim._addTrack(eventName: eventName, status: status);
   }
 
-  static SimCounter counter({required SimDart sim, required String name}) {
-    return sim._counterProperties
-        .putIfAbsent(name, () => SimCounter(name: name));
+  static void scheduleNextAction({required SimDart sim}) {
+    sim._scheduleNextAction();
   }
 
-  static SimNum num({required SimDart sim, required String name}) {
-    return sim._numProperties.putIfAbsent(name, () => SimNum(name: name));
+  static void error({required SimDart sim, required String msg}) {
+    sim._error = true;
+    sim._actions.clear();
+    sim._terminator?.completeError(StateError(msg));
+    sim._terminator = null;
   }
 }
