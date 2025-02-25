@@ -3,11 +3,9 @@ import 'dart:async';
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
 import 'package:simdart/src/internal/completer_action.dart';
-import 'package:simdart/src/internal/resource.dart';
-import 'package:simdart/src/internal/resources_context_impl.dart';
 import 'package:simdart/src/internal/time_action.dart';
 import 'package:simdart/src/interval.dart';
-import 'package:simdart/src/resources_context.dart';
+import 'package:simdart/src/resources.dart';
 import 'package:simdart/src/sim_context.dart';
 import 'package:simdart/src/sim_counter.dart';
 import 'package:simdart/src/sim_num.dart';
@@ -35,13 +33,18 @@ class EventAction extends TimeAction implements SimContext {
   final SimDart sim;
 
   @override
-  late final ResourcesContext resources = ResourcesContextImpl(sim, this);
+  late final ResourcesContext resources = ResourcesFactory.context(sim, this);
 
   @override
   int get now => sim.now;
 
   /// Internal handler for resuming a waiting event.
   EventCompleter? _eventCompleter;
+  EventCompleter? get eventCompleter => _eventCompleter;
+
+  void buildCompleter() {
+    _eventCompleter = EventCompleter(event: this);
+  }
 
   @override
   void execute() {
@@ -95,53 +98,6 @@ class EventAction extends TimeAction implements SimContext {
     SimDartHelper.scheduleNextAction(sim: sim);
 
     await _eventCompleter!.future;
-    _eventCompleter = null;
-  }
-
-  Future<void> acquireResource(String id) async {
-    if (_eventCompleter != null) {
-      SimDartHelper.error(
-          sim: sim,
-          msg:
-              "This event should be waiting for the resource to be released. Did you forget to use 'await'?");
-      return;
-    }
-    Resource? resource = SimDartHelper.getResource(sim: sim, resourceId: id);
-    if (resource != null) {
-      bool acquired = resource.acquire(this);
-      if (!acquired) {
-        if (sim.includeTracks) {
-          SimDartHelper.addSimulationTrack(
-              sim: sim, eventName: eventName, status: Status.yielded);
-        }
-        _eventCompleter = EventCompleter(event: this);
-        resource.waiting.add(this);
-        SimDartHelper.scheduleNextAction(sim: sim);
-        await _eventCompleter!.future;
-        _eventCompleter = null;
-        return await acquireResource(id);
-      }
-    }
-  }
-
-  void releaseResource(String id) {
-    Resource? resource = SimDartHelper.getResource(sim: sim, resourceId: id);
-    if (resource != null) {
-      if (resource.release(sim, this)) {
-        if (resource.waiting.isNotEmpty) {
-          //resource.waiting.removeAt(0).call();
-          EventAction other = resource.waiting.removeAt(0);
-          // Schedule a complete to resume this event in the future.
-          SimDartHelper.addAction(
-              sim: sim,
-              action: CompleterAction(
-                  start: sim.now,
-                  complete: other._eventCompleter!.complete,
-                  order: other.order));
-          SimDartHelper.scheduleNextAction(sim: sim);
-        }
-      }
-    }
   }
 
   @override

@@ -7,7 +7,6 @@ import 'package:simdart/src/event.dart';
 import 'package:simdart/src/internal/event_action.dart';
 import 'package:simdart/src/internal/repeat_event_action.dart';
 import 'package:simdart/src/internal/resource.dart';
-import 'package:simdart/src/internal/resources_impl.dart';
 import 'package:simdart/src/internal/simdart_interface.dart';
 import 'package:simdart/src/internal/time_action.dart';
 import 'package:simdart/src/interval.dart';
@@ -55,7 +54,7 @@ class SimDart implements SimDartInterface {
   /// Holds the resources in the simulator.
   final Map<String, Resource> _resources = {};
 
-  late final Resources resources = ResourcesImpl(this);
+  late final Resources resources = ResourcesFactory.sim(this);
 
   /// The instance of the random number generator used across the simulation.
   /// It is initialized once and reused to improve performance, avoiding the need to

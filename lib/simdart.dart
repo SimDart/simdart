@@ -1,8 +1,7 @@
 export 'src/event.dart';
 export 'src/interval.dart';
 export 'src/observable.dart';
-export 'src/resources_context.dart';
-export 'src/resources.dart';
+export 'src/resources.dart' hide ResourcesFactory;
 export 'src/simdart.dart' hide SimDartHelper;
 export 'src/simulation_track.dart';
 export 'src/start_time_handling.dart';
