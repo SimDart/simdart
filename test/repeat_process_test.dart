@@ -47,7 +47,7 @@ void main() {
     test('Resource - acquire and wait', () async {
       SimDart sim = SimDart(includeTracks: true);
 
-      sim.resources.limited(id: 'r');
+      sim.resources.limited(name: 'r');
 
       sim.process(
           event: (context) async {
@@ -79,7 +79,7 @@ void main() {
     test('Resource', () async {
       SimDart sim = SimDart(includeTracks: true);
 
-      sim.resources.limited(id: 'r');
+      sim.resources.limited(name: 'r');
 
       sim.repeatProcess(
           event: (context) async {
@@ -113,7 +113,7 @@ void main() {
     test('Resource - stop', () async {
       SimDart sim = SimDart(includeTracks: true);
 
-      sim.resources.limited(id: 'r');
+      sim.resources.limited(name: 'r');
 
       sim.repeatProcess(
           event: (context) async {
