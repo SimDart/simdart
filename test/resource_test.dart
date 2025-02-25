@@ -7,7 +7,7 @@ void main() {
   group('Resource', () {
     test('Capacity 1', () async {
       SimDart sim = SimDart(includeTracks: true);
-      sim.resources.limited(id: 'r');
+      sim.resources.limited(name: 'r');
 
       fA(context) async {
         await context.resources.acquire('r');
@@ -52,7 +52,7 @@ void main() {
     });
     test('Capacity 2', () async {
       SimDart sim = SimDart(includeTracks: true);
-      sim.resources.limited(id: 'r', capacity: 2);
+      sim.resources.limited(name: 'r', capacity: 2);
 
       event(context) async {
         await context.resources.acquire('r');
@@ -83,7 +83,7 @@ void main() {
     });
     test('Avoid unnecessary re-executing', () async {
       SimDart sim = SimDart(includeTracks: true);
-      sim.resources.limited(id: 'r', capacity: 2);
+      sim.resources.limited(name: 'r', capacity: 2);
 
       eventResource(SimContext context) async {
         await context.resources.acquire('resource');
@@ -93,7 +93,7 @@ void main() {
 
       event(SimContext context) async {}
 
-      sim.resources.limited(id: 'resource', capacity: 2);
+      sim.resources.limited(name: 'resource', capacity: 2);
 
       sim.process(event: eventResource, name: 'A');
       sim.process(event: eventResource, name: 'B', start: 1);
@@ -122,7 +122,7 @@ void main() {
       expect(
         () async {
           SimDart sim = SimDart(includeTracks: true);
-          sim.resources.limited(id: 'r', capacity: 1);
+          sim.resources.limited(name: 'r', capacity: 1);
           sim.process(
               event: (context) async {
                 context.resources.acquire('r'); // acquired

@@ -6,7 +6,6 @@ import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
 import 'package:simdart/src/internal/event_action.dart';
 import 'package:simdart/src/internal/repeat_event_action.dart';
-import 'package:simdart/src/internal/resource.dart';
 import 'package:simdart/src/internal/simdart_interface.dart';
 import 'package:simdart/src/internal/time_action.dart';
 import 'package:simdart/src/interval.dart';
@@ -51,9 +50,7 @@ class SimDart implements SimDartInterface {
   final Map<String, SimNum> _numProperties = {};
   final Map<String, SimCounter> _counterProperties = {};
 
-  /// Holds the resources in the simulator.
-  final Map<String, Resource> _resources = {};
-
+  final ResourceStore _resourceStore = ResourceStore();
   late final Resources resources = ResourcesFactory.sim(this);
 
   /// The instance of the random number generator used across the simulation.
@@ -242,16 +239,12 @@ class SimDart implements SimDartInterface {
   }
 
   void _addTrack({required String eventName, required Status status}) {
-    Map<String, int> resourceUsage = {};
-    for (Resource resource in _resources.values) {
-      resourceUsage[resource.id] = resource.queue.length;
-    }
     _tracks ??= [];
     _tracks!.add(SimulationTrack(
         status: status,
         name: eventName,
         time: now,
-        resourceUsage: resourceUsage));
+        resourceUsage: _resourceStore.usage()));
   }
 
   Future<void> _consumeNextAction() async {
@@ -296,17 +289,8 @@ class SimDartHelper {
     sim._addAction(action);
   }
 
-  static Resource? getResource(
-      {required SimDart sim, required String? resourceId}) {
-    return sim._resources[resourceId];
-  }
-
-  static void addResource(
-      {required SimDart sim,
-      required String resourceId,
-      required Resource Function() create}) {
-    sim._resources.putIfAbsent(resourceId, create);
-  }
+  static ResourceStore resourceStore({required SimDart sim}) =>
+      sim._resourceStore;
 
   static void addSimulationTrack(
       {required SimDart sim,
