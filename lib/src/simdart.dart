@@ -144,6 +144,10 @@ class SimDart implements SimDartInterface {
     return _buildResult();
   }
 
+  void stop() {
+    _terminator?.complete();
+  }
+
   @override
   SimCounter counter(String name) {
     return _counterProperties.putIfAbsent(name, () => SimCounter(name: name));

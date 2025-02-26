@@ -1,7 +1,9 @@
 ## 0.3.0
 
 * Access the list of created resources.
-* Added: `runState` to check if the simulation has not started, is running, or has completed.
+* Added
+  * `runState` getter to determine whether the simulation has not started, is running, or has completed.
+  * `stop` method to manually stop the simulation before it completes.
 
 ## 0.2.0
 
