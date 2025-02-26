@@ -45,7 +45,8 @@ class SimDart implements SimDartInterface {
       : random = Random(seed),
         _now = now;
 
-  bool _hasRun = false;
+  RunState _runState = RunState.notStarted;
+  RunState get runState => _runState;
 
   final Map<String, SimNum> _numProperties = {};
   final Map<String, SimCounter> _counterProperties = {};
@@ -113,11 +114,11 @@ class SimDart implements SimDartInterface {
   /// - [until]: The time at which execution should stop. Execution will include events
   ///   scheduled at this time (inclusive). If null, execution will continue indefinitely.
   Future<SimResult> run({int? until}) async {
-    if (_hasRun) {
-      throw StateError('The simulation has already been run.');
+    if (runState != RunState.notStarted) {
+      throw StateError('Simulation has already started.');
     }
 
-    _hasRun = true;
+    _runState = RunState.running;
     if (until != null && _now > until) {
       throw ArgumentError('`now` must be less than or equal to `until`.');
     }
@@ -139,6 +140,7 @@ class SimDart implements SimDartInterface {
     await _terminator?.future;
     _duration = _now - (_startTime ?? 0);
     _terminator = null;
+    _runState = RunState.finished;
     return _buildResult();
   }
 
@@ -276,6 +278,8 @@ class SimDart implements SimDartInterface {
     action.execute();
   }
 }
+
+enum RunState { notStarted, running, finished }
 
 typedef StopCondition = bool Function(SimDart sim);
 
