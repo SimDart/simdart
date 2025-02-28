@@ -19,13 +19,15 @@ class TestAction extends TimeAction {
     names.add(name);
     SimDartHelper.scheduleNextAction(sim: sim);
   }
+
+  @override
+  void dispose() {}
 }
 
 void main() {
   group('TimeLoop', () {
     test('Loop', () async {
       SimDart sim = SimDart(
-          includeTracks: true,
           executionPriority: 0,
           startTimeHandling: StartTimeHandling.throwErrorIfPast);
 

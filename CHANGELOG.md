@@ -4,6 +4,7 @@
 * Added
   * `runState` getter to determine whether the simulation has not started, is running, or has completed.
   * `stop` method to manually stop the simulation before it completes.
+  * Observer to receive data throughout the simulation.
 
 ## 0.2.0
 

@@ -12,8 +12,8 @@ import 'package:simdart/src/interval.dart';
 import 'package:simdart/src/resources.dart';
 import 'package:simdart/src/sim_counter.dart';
 import 'package:simdart/src/sim_num.dart';
+import 'package:simdart/src/sim_observer.dart';
 import 'package:simdart/src/sim_result.dart';
-import 'package:simdart/src/simulation_track.dart';
 import 'package:simdart/src/start_time_handling.dart';
 
 /// Represents a discrete-event simulation engine.
@@ -26,8 +26,6 @@ class SimDart implements SimDartInterface {
   /// - [startTimeHandling]: Determines how to handle events scheduled with a start
   /// time in the past. The default behavior is [StartTimeHandling.throwErrorIfPast].
   ///
-  /// - [includeTracks]: Determines whether simulation tracks should be included in the simulation result.
-  ///
   /// - [seed]: The optional parameter used to initialize the random number generator
   /// for deterministic behavior in the simulation. If provided, it ensures that the
   /// random sequence is reproducible for the same seed value.
@@ -39,7 +37,7 @@ class SimDart implements SimDartInterface {
   SimDart(
       {this.startTimeHandling = StartTimeHandling.throwErrorIfPast,
       int now = 0,
-      this.includeTracks = false,
+      this.observer,
       this.executionPriority = 0,
       int? seed})
       : random = Random(seed),
@@ -47,6 +45,8 @@ class SimDart implements SimDartInterface {
 
   RunState _runState = RunState.notStarted;
   RunState get runState => _runState;
+
+  final SimObserver? observer;
 
   final Map<String, SimNum> _numProperties = {};
   final Map<String, SimCounter> _counterProperties = {};
@@ -82,15 +82,6 @@ class SimDart implements SimDartInterface {
 
   int _executionCount = 0;
 
-  /// Determines whether simulation tracks should be included in the simulation result.
-  ///
-  /// When set to `true`, the simulation will collect and return a list of [SimulationTrack]
-  /// objects as part of its result. If set to `false`, the tracks will not be collected,
-  /// and the list will be `null`.
-  ///
-  /// Default: `false`
-  final bool includeTracks;
-
   int? _startTime;
 
   int _duration = 0;
@@ -103,9 +94,7 @@ class SimDart implements SimDartInterface {
   int get now => _now;
   late int _now;
 
-  List<SimulationTrack>? _tracks;
-
-  Completer<void>? _terminator;
+  final Completer<void> _terminator = Completer();
 
   bool _error = false;
 
@@ -119,33 +108,30 @@ class SimDart implements SimDartInterface {
     }
 
     _runState = RunState.running;
+    observer?.onStart();
     if (until != null && _now > until) {
       throw ArgumentError('`now` must be less than or equal to `until`.');
     }
     _until = until;
 
-    if (_terminator != null) {
-      return _buildResult();
-    }
-    if (_actions.isEmpty) {
-      _duration = 0;
-      _startTime = 0;
-      return _buildResult();
-    }
     _duration = 0;
-    _startTime = null;
 
-    _terminator = Completer<void>();
-    _scheduleNextAction();
-    await _terminator?.future;
-    _duration = _now - (_startTime ?? 0);
-    _terminator = null;
+    if (_actions.isEmpty) {
+      _startTime = 0;
+    } else {
+      _startTime = null;
+      _scheduleNextAction();
+      await _terminator.future;
+      _duration = _now - (_startTime ?? 0);
+    }
     _runState = RunState.finished;
     return _buildResult();
   }
 
   void stop() {
-    _terminator?.complete();
+    if (!_terminator.isCompleted) {
+      _terminator.complete();
+    }
   }
 
   @override
@@ -216,7 +202,6 @@ class SimDart implements SimDartInterface {
     return SimResult(
         startTime: _startTime ?? 0,
         duration: _duration,
-        tracks: _tracks,
         numProperties: _numProperties,
         counterProperties: _counterProperties);
   }
@@ -244,22 +229,14 @@ class SimDart implements SimDartInterface {
     _actions.add(action);
   }
 
-  void _addTrack({required String eventName, required Status status}) {
-    _tracks ??= [];
-    _tracks!.add(SimulationTrack(
-        status: status,
-        name: eventName,
-        time: now,
-        resourceUsage: _resourceStore.usage()));
-  }
-
   Future<void> _consumeNextAction() async {
-    if (_error) {
+    if (_error || _terminator.isCompleted) {
       return;
     }
+
     _nextActionScheduled = false;
     if (_actions.isEmpty) {
-      _terminator?.complete();
+      _terminator.complete();
       return;
     }
 
@@ -270,7 +247,7 @@ class SimDart implements SimDartInterface {
       _now = action.start;
       if (_until != null && now > _until!) {
         _startTime ??= now;
-        _terminator?.complete();
+        _terminator.complete();
         return;
       }
     } else if (action.start < now) {
@@ -300,21 +277,16 @@ class SimDartHelper {
   static ResourceStore resourceStore({required SimDart sim}) =>
       sim._resourceStore;
 
-  static void addSimulationTrack(
-      {required SimDart sim,
-      required String eventName,
-      required Status status}) {
-    sim._addTrack(eventName: eventName, status: status);
-  }
-
   static void scheduleNextAction({required SimDart sim}) {
     sim._scheduleNextAction();
   }
 
   static void error({required SimDart sim, required String msg}) {
     sim._error = true;
-    sim._actions.clear();
-    sim._terminator?.completeError(StateError(msg));
-    sim._terminator = null;
+    while (sim._actions.isNotEmpty) {
+      TimeAction action = sim._actions.removeFirst();
+      action.dispose();
+    }
+    sim._terminator.completeError(StateError(msg));
   }
 }

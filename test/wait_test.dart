@@ -1,11 +1,18 @@
 import 'package:simdart/simdart.dart';
 import 'package:test/test.dart';
 
-import 'track_tester.dart';
+import 'test_helper.dart';
 
 Future<void> emptyEvent(SimContext context) async {}
 
 void main() {
+  late SimDart sim;
+  TestHelper helper = TestHelper();
+
+  setUp(() {
+    sim = SimDart(observer: helper);
+  });
+
   group('Wait', () {
     test('now', () async {
       late int now1, now2;
@@ -23,20 +30,22 @@ void main() {
       expect(now2, 11);
     });
     test('simple', () async {
-      SimDart sim = SimDart(includeTracks: true);
       sim.process(
           event: (context) async {
             await context.wait(10);
           },
           name: 'a');
 
-      SimResult result = await sim.run();
+      await sim.run();
 
-      TrackTester tt = TrackTester(result);
-      tt.test(['[0][a][called]', '[0][a][yielded]', '[10][a][resumed]']);
+      helper.test([
+        '[0][a][called]',
+        '[0][a][yielded]',
+        '[10][a][resumed]',
+        '[10][a][finished]'
+      ]);
     });
     test('with await', () async {
-      SimDart sim = SimDart(includeTracks: true);
       sim.process(
           event: (context) async {
             await context.wait(10);
@@ -44,18 +53,17 @@ void main() {
           name: 'a');
       sim.process(event: emptyEvent, start: 5, name: 'b');
 
-      SimResult result = await sim.run();
-
-      TrackTester tt = TrackTester(result);
-      tt.test([
+      await sim.run();
+      helper.test([
         '[0][a][called]',
         '[0][a][yielded]',
         '[5][b][called]',
-        '[10][a][resumed]'
+        '[5][b][finished]',
+        '[10][a][resumed]',
+        '[10][a][finished]'
       ]);
     });
     test('with await 2', () async {
-      SimDart sim = SimDart(includeTracks: true);
       sim.process(
           event: (context) async {
             await context.wait(10);
@@ -65,22 +73,22 @@ void main() {
           name: 'a');
       sim.process(event: emptyEvent, delay: 5, name: 'b');
 
-      SimResult result = await sim.run();
-
-      TrackTester tt = TrackTester(result);
-      tt.test([
+      await sim.run();
+      helper.test([
         '[0][a][called]',
         '[0][a][yielded]',
         '[5][b][called]',
+        '[5][b][finished]',
         '[10][a][resumed]',
-        '[11][c][called]'
+        '[10][a][finished]',
+        '[11][c][called]',
+        '[11][c][finished]'
       ]);
     });
 
     test('wait without await', () async {
       expect(
         () async {
-          SimDart sim = SimDart(includeTracks: true);
           sim.process(
               event: (context) async {
                 context.wait(10);
@@ -102,7 +110,6 @@ void main() {
     test('multiple wait without await', () async {
       expect(
         () async {
-          SimDart sim = SimDart(includeTracks: true);
           sim.process(
               event: (context) async {
                 context.wait(10);

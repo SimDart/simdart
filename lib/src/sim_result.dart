@@ -2,18 +2,15 @@ import 'dart:collection';
 
 import 'package:simdart/src/sim_counter.dart';
 import 'package:simdart/src/sim_num.dart';
-import 'package:simdart/src/simulation_track.dart';
 
 /// Represents the simulation result.
 class SimResult {
   SimResult(
       {required this.duration,
       required this.startTime,
-      required List<SimulationTrack>? tracks,
       required Map<String, SimNum> numProperties,
       required Map<String, SimCounter> counterProperties})
-      : tracks = tracks != null ? UnmodifiableListView(tracks) : null,
-        numProperties = UnmodifiableMapView(numProperties),
+      : numProperties = UnmodifiableMapView(numProperties),
         counterProperties = UnmodifiableMapView(counterProperties);
 
   /// The duration, in simulated time units, that the simulation took to execute.
@@ -30,8 +27,6 @@ class SimResult {
   /// then the simulation start time would be 10. This value helps track when
   /// the simulation officially begins its execution in terms of the simulation time.
   final int startTime;
-
-  final List<SimulationTrack>? tracks;
 
   final Map<String, SimNum> numProperties;
   final Map<String, SimCounter> counterProperties;

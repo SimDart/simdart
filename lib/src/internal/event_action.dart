@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
+import 'package:simdart/src/event_phase.dart';
 import 'package:simdart/src/internal/completer_action.dart';
 import 'package:simdart/src/internal/time_action.dart';
 import 'package:simdart/src/interval.dart';
@@ -10,7 +11,6 @@ import 'package:simdart/src/sim_context.dart';
 import 'package:simdart/src/sim_counter.dart';
 import 'package:simdart/src/sim_num.dart';
 import 'package:simdart/src/simdart.dart';
-import 'package:simdart/src/simulation_track.dart';
 
 @internal
 class EventAction extends TimeAction implements SimContext {
@@ -52,10 +52,11 @@ class EventAction extends TimeAction implements SimContext {
       throw StateError('This event is yielding');
     }
 
-    if (sim.includeTracks) {
-      SimDartHelper.addSimulationTrack(
-          sim: sim, eventName: eventName, status: Status.called);
-    }
+    sim.observer?.onEvent(
+        name: eventName,
+        time: sim.now,
+        phase: EventPhase.called,
+        executionHash: hashCode);
 
     _runEvent().then((_) {
       if (_eventCompleter != null) {
@@ -65,7 +66,15 @@ class EventAction extends TimeAction implements SimContext {
                 "Next event is being scheduled, but the current one is still paused waiting for continuation. Did you forget to use 'await'?");
         return;
       }
+      sim.observer?.onEvent(
+          name: eventName,
+          time: sim.now,
+          phase: EventPhase.finished,
+          executionHash: hashCode);
+
       SimDartHelper.scheduleNextAction(sim: sim);
+    }).catchError((e) {
+      // Sim already marked to finish. Let the last event finalize.
     });
   }
 
@@ -82,10 +91,12 @@ class EventAction extends TimeAction implements SimContext {
       return;
     }
 
-    if (sim.includeTracks) {
-      SimDartHelper.addSimulationTrack(
-          sim: sim, eventName: eventName, status: Status.yielded);
-    }
+    sim.observer?.onEvent(
+        name: eventName,
+        time: sim.now,
+        phase: EventPhase.yielded,
+        executionHash: hashCode);
+
     _eventCompleter = EventCompleter(event: this);
 
     // Schedule a complete to resume this event in the future.
@@ -131,6 +142,11 @@ class EventAction extends TimeAction implements SimContext {
   SimNum num(String name) {
     return sim.num(name);
   }
+
+  @override
+  void dispose() {
+    _eventCompleter?.complete();
+  }
 }
 
 class EventCompleter {
@@ -143,10 +159,11 @@ class EventCompleter {
   Future<void> get future => _completer.future;
 
   void complete() {
-    if (event.sim.includeTracks) {
-      SimDartHelper.addSimulationTrack(
-          sim: event.sim, eventName: event.eventName, status: Status.resumed);
-    }
+    event.sim.observer?.onEvent(
+        name: event.eventName,
+        time: event.sim.now,
+        phase: EventPhase.resumed,
+        executionHash: hashCode);
     _completer.complete();
     event._eventCompleter = null;
   }

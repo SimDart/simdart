@@ -1,10 +1,10 @@
 import 'dart:collection';
 
 import 'package:meta/meta.dart';
+import 'package:simdart/src/event_phase.dart';
 import 'package:simdart/src/internal/completer_action.dart';
 import 'package:simdart/src/internal/event_action.dart';
 import 'package:simdart/src/simdart.dart';
-import 'package:simdart/src/simulation_track.dart';
 
 @internal
 class ResourceStore {
@@ -163,10 +163,11 @@ class ResourcesContext extends Resources {
     if (resource != null) {
       bool acquired = resource.acquire(_event);
       if (!acquired) {
-        if (_sim.includeTracks) {
-          SimDartHelper.addSimulationTrack(
-              sim: _sim, eventName: _event.eventName, status: Status.yielded);
-        }
+        _sim.observer?.onEvent(
+            name: _event.eventName,
+            time: _sim.now,
+            phase: EventPhase.yielded,
+            executionHash: _event.hashCode);
         _event.buildCompleter();
         resource._waiting.add(_event);
         SimDartHelper.scheduleNextAction(sim: _sim);
