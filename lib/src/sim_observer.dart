@@ -6,7 +6,7 @@ abstract class SimObserver {
   ///
   /// [name] - The name of the resource whose usage is being reported.
   /// [usage] - The percentage of resource usage, typically between 0 and 100.
-  void onResourceUsage({required String name, required double usage});
+  // void onResourceUsage({required String name, required double usage});
 
   /// Called when an event occurs in the simulation.
   ///
@@ -26,8 +26,8 @@ abstract class SimObserver {
 mixin SimObserverMixin implements SimObserver {
   @override
   void onStart() {}
-  @override
-  void onResourceUsage({required String name, required double usage}) {}
+  //@override
+  //void onResourceUsage({required String name, required double usage}) {}
   @override
   void onEvent(
       {required String name,
