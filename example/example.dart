@@ -1,13 +1,12 @@
 import 'package:simdart/simdart.dart';
 
 void main() async {
-  final SimDart sim = SimDart(includeTracks: true);
+  final SimDart sim = SimDart(observer: ConsoleEventObserver());
 
   sim.process(event: _eventA, name: 'A');
 
   SimResult result = await sim.run();
 
-  result.tracks?.forEach((track) => print(track));
   print('startTime: ${result.startTime}');
   print('duration: ${result.duration}');
 }

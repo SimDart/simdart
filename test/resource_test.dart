@@ -1,13 +1,19 @@
 import 'package:simdart/simdart.dart';
 import 'package:test/test.dart';
 
-import 'track_tester.dart';
+import 'test_helper.dart';
 
 void main() {
+  late SimDart sim;
+  TestHelper helper = TestHelper();
+
+  setUp(() {
+    sim = SimDart(observer: helper);
+  });
+
   group('Resource', () {
     test('Capacity 1', () async {
-      SimDart sim = SimDart(includeTracks: true);
-      sim.resources.limited(id: 'r');
+      sim.resources.limited(name: 'r');
 
       fA(context) async {
         await context.resources.acquire('r');
@@ -31,10 +37,9 @@ void main() {
       sim.process(event: fB, name: 'B');
       sim.process(event: fC, name: 'C');
 
-      SimResult result = await sim.run();
+      await sim.run();
 
-      TrackTester tt = TrackTester(result);
-      tt.test([
+      helper.test([
         '[0][A][called]',
         '[0][A][yielded]',
         '[0][B][called]',
@@ -42,17 +47,19 @@ void main() {
         '[0][C][called]',
         '[0][C][yielded]',
         '[1][A][resumed]',
+        '[1][A][finished]',
         '[1][B][resumed]',
         '[1][B][yielded]',
         '[2][B][resumed]',
+        '[2][B][finished]',
         '[2][C][resumed]',
         '[2][C][yielded]',
-        '[3][C][resumed]'
+        '[3][C][resumed]',
+        '[3][C][finished]'
       ]);
     });
     test('Capacity 2', () async {
-      SimDart sim = SimDart(includeTracks: true);
-      sim.resources.limited(id: 'r', capacity: 2);
+      sim.resources.limited(name: 'r', capacity: 2);
 
       event(context) async {
         await context.resources.acquire('r');
@@ -64,10 +71,9 @@ void main() {
       sim.process(event: event, name: 'B');
       sim.process(event: event, name: 'C');
 
-      SimResult result = await sim.run();
+      await sim.run();
 
-      TrackTester tt = TrackTester(result);
-      tt.test([
+      helper.test([
         '[0][A][called]',
         '[0][A][yielded]',
         '[0][B][called]',
@@ -75,15 +81,17 @@ void main() {
         '[0][C][called]',
         '[0][C][yielded]',
         '[1][A][resumed]',
+        '[1][A][finished]',
         '[1][B][resumed]',
+        '[1][B][finished]',
         '[1][C][resumed]',
         '[1][C][yielded]',
-        '[2][C][resumed]'
+        '[2][C][resumed]',
+        '[2][C][finished]'
       ]);
     });
     test('Avoid unnecessary re-executing', () async {
-      SimDart sim = SimDart(includeTracks: true);
-      sim.resources.limited(id: 'r', capacity: 2);
+      sim.resources.limited(name: 'r', capacity: 2);
 
       eventResource(SimContext context) async {
         await context.resources.acquire('resource');
@@ -93,17 +101,16 @@ void main() {
 
       event(SimContext context) async {}
 
-      sim.resources.limited(id: 'resource', capacity: 2);
+      sim.resources.limited(name: 'resource', capacity: 2);
 
       sim.process(event: eventResource, name: 'A');
       sim.process(event: eventResource, name: 'B', start: 1);
       sim.process(event: eventResource, name: 'C', start: 2);
       sim.process(event: event, name: 'D', start: 3);
 
-      SimResult result = await sim.run();
+      await sim.run();
 
-      TrackTester tt = TrackTester(result);
-      tt.test([
+      helper.test([
         '[0][A][called]',
         '[0][A][yielded]',
         '[1][B][called]',
@@ -111,18 +118,21 @@ void main() {
         '[2][C][called]',
         '[2][C][yielded]',
         '[3][D][called]',
+        '[3][D][finished]',
         '[10][A][resumed]',
+        '[10][A][finished]',
         '[10][C][resumed]',
         '[10][C][yielded]',
         '[11][B][resumed]',
-        '[20][C][resumed]'
+        '[11][B][finished]',
+        '[20][C][resumed]',
+        '[20][C][finished]'
       ]);
     });
     test('without await', () async {
       expect(
         () async {
-          SimDart sim = SimDart(includeTracks: true);
-          sim.resources.limited(id: 'r', capacity: 1);
+          sim.resources.limited(name: 'r', capacity: 1);
           sim.process(
               event: (context) async {
                 context.resources.acquire('r'); // acquired

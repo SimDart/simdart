@@ -1,5 +1,5 @@
 import 'package:simdart/src/internal/simdart_interface.dart';
-import 'package:simdart/src/resources_context.dart';
+import 'package:simdart/src/resources.dart';
 
 abstract interface class SimContext implements SimDartInterface {
   /// Pauses the execution of the event for the specified [delay] in simulation time.

@@ -14,4 +14,6 @@ abstract class TimeAction {
   final int order;
 
   void execute();
+
+  void dispose();
 }

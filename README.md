@@ -9,8 +9,6 @@
 It is designed to model and simulate systems where events occur at discrete points in time,
 allowing for the analysis of complex processes and workflows.
 
-Explore and learn more by clicking [here](https://simdart.github.io/simdart-demo/).
-
 ## Why Dart?
 
 [Dart](https://dart.dev/) was chosen for this project due to its fast execution, single-threaded nature, and ease of use.
@@ -125,7 +123,7 @@ import 'package:simdart/simdart.dart';
 void main() async {
   final SimDart sim = SimDart();
 
-  sim.resources.limited(id: 'resource', capacity: 1);
+  sim.resources.limited(name: 'resource', capacity: 1);
 
   sim.process(event: _eventResource, name: 'A');
   sim.process(event: _eventResource, name: 'B');

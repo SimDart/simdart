@@ -1,3 +1,11 @@
+## 0.3.0
+
+* Access the list of created resources.
+* Added
+  * `runState` getter to determine whether the simulation has not started, is running, or has completed.
+  * `stop` method to manually stop the simulation before it completes.
+  * Observer to receive data throughout the simulation.
+
 ## 0.2.0
 
 * Setting to determine how often `Future.delayed` is used instead of `Future.microtask` during event execution to allow GUI refresh.
@@ -8,8 +16,8 @@
 ## 0.1.0
 
 * Initial release
-  * Discrete event processing
-  * Event scheduling, execution, waiting, and repetition
-  * Intervals management
+  * Discrete event processing.
+  * Event scheduling, execution, waiting, and repetition.
+  * Intervals management.
   * Resources
     * Capacity limit
