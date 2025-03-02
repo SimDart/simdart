@@ -65,6 +65,7 @@ class EventAction extends TimeAction implements SimContext {
       print('then $eventName ${sim.runState.name}');
         if (_eventCompleter != null && sim.runState==RunState.running) {
           //TODO method or throw?
+          print('aqui 2?');
           SimDartHelper.error(
               sim: sim,
               error:
@@ -79,15 +80,10 @@ class EventAction extends TimeAction implements SimContext {
             executionHash: hashCode);
         SimDartHelper.scheduleNextAction(sim: sim);
     }).catchError((error) {
+      print('ZZ $error');
       //TODO rever
-      if(error is CompleterInterrupt) {
-        sim.listener?.onEvent(
-            name: eventName,
-            time: sim.now,
-            phase: EventPhase.interrupted,
-            executionHash: hashCode);
-      } else  {
-        print('ZZ');
+      if(error is! CompleterInterrupt) {
+        print('aqui 3?');
         SimDartHelper.error(sim: sim, error: error);
       }
     });
@@ -97,6 +93,7 @@ class EventAction extends TimeAction implements SimContext {
   Future<void> wait(int delay) async {
     if (_eventCompleter != null) {
       //TODO method or throw?
+      print('aqui 1?');
       SimDartHelper.error(
           sim: sim,
           error: StateError("The event is already waiting. Did you forget to use 'await'?"));
@@ -178,7 +175,7 @@ class EventCompleter {
         time: event.sim.now,
         phase: EventPhase.resumed,
         executionHash: hashCode);
-    _completer.complete();
+      _completer.complete();
     event._eventCompleter = null;
     SimDartHelper.removeCompleter(sim: event.sim, completer: _completer);
   }

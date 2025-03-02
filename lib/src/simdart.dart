@@ -130,7 +130,14 @@ class SimDart implements SimDartInterface {
       _startTime = null;
       _scheduleNextAction();
       await _terminator.future;
-      print('foi: $_error');
+
+      try {
+        _disposeCompleteList();
+      }catch(e){
+        print(e);
+      }
+
+      print('foi: ${_error.runtimeType}: $_error');
       if (_error != null) {
         print('ue? erro?');
         _runState = RunState.error;
@@ -156,7 +163,7 @@ class SimDart implements SimDartInterface {
       if (!completer.isCompleted) {
         print('vai CompleterInterrupt');
         // prevents subsequent methods from being executed after complete inside the async method.
-        completer.completeError(CompleterInterrupt());
+          completer.completeError(CompleterInterrupt());
       }
     }
   }
@@ -234,9 +241,9 @@ class SimDart implements SimDartInterface {
   }
 
   void _scheduleNextAction() {
-    print('_scheduleNextAction');
-    _debugListener?.onScheduleNextAction();
     if (!_nextActionScheduled) {
+      print('_scheduleNextAction');
+      _debugListener?.onScheduleNextAction();
       _nextActionScheduled = true;
       if (executionPriority == 0 || _executionCount < executionPriority) {
         _executionCount++;
@@ -320,11 +327,11 @@ class SimDartHelper {
   }
 
   static void error({required SimDart sim, required StateError error}) {
+    print('error');
     if(sim._error==null) {
       sim._error = error;
       sim._runState = RunState.error;
     }
-    sim._disposeCompleteList();
   }
   
   static void setDebugListener({required SimDart sim, required DebugListener? listener}) {
@@ -332,8 +339,8 @@ class SimDartHelper {
   }
 
   static void stop({required SimDart sim}) {
+    print('stopando');
     sim._debugListener?.onStop();
     sim._runState = RunState.stopped;
-    sim._disposeCompleteList();
   }
 }

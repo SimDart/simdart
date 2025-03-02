@@ -11,8 +11,6 @@ enum EventPhase {
 
   yielded,
 
-  interrupted,
-
   finished;
 
   /// Returns the string representation of the status.

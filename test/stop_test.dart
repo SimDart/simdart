@@ -60,8 +60,7 @@ void main() {
         '[0][a][called]',
         '[0][a][yielded]',
         '[1][b][called]',
-        '[1][b][finished]',
-        '[1][a][interrupted]'
+        '[1][b][finished]'
       ]);
       helper.testTracks([
         'scheduleNextAction',
@@ -74,7 +73,6 @@ void main() {
         'nextAction',
         'executeAction',
         'stop',
-        'scheduleNextAction',
         'scheduleNextAction',
         'nextAction'
       ]);
@@ -119,6 +117,9 @@ void main() {
         '[2][c][finished]'
       ]);
       helper.testTracks([
+        'scheduleNextAction',
+        'nextAction',
+        'executeAction',
         'scheduleNextAction',
         'nextAction',
         'executeAction',
