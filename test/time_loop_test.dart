@@ -19,9 +19,6 @@ class TestAction extends TimeAction {
     names.add(name);
     SimDartHelper.scheduleNextAction(sim: sim);
   }
-
-  @override
-  void dispose() {}
 }
 
 void main() {

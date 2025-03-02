@@ -1,7 +1,7 @@
 import 'package:simdart/src/event_phase.dart';
 
-/// A base class for observing simulation.
-abstract class SimObserver {
+/// A base class for listening simulation.
+abstract class SimListener {
   /// Called when there is a change in resource usage.
   ///
   /// [name] - The name of the resource whose usage is being reported.
@@ -21,11 +21,15 @@ abstract class SimObserver {
       required int executionHash});
 
   void onStart() {}
+
+  void onError(String error);
 }
 
-mixin SimObserverMixin implements SimObserver {
+mixin SimListenerMixin implements SimListener {
   @override
   void onStart() {}
+  @override
+  void onError(String error) {}
   //@override
   //void onResourceUsage({required String name, required double usage}) {}
   @override
@@ -36,8 +40,8 @@ mixin SimObserverMixin implements SimObserver {
       required int executionHash}) {}
 }
 
-class ConsoleEventObserver with SimObserverMixin {
-  ConsoleEventObserver();
+class ConsoleEventListener with SimListenerMixin {
+  ConsoleEventListener();
 
   @override
   void onEvent(
@@ -46,5 +50,10 @@ class ConsoleEventObserver with SimObserverMixin {
       required EventPhase phase,
       required int executionHash}) {
     print('[time:$time][event:$name][phase:${phase.name}]');
+  }
+
+  @override
+  void onError(String error) {
+    print('Error: $error');
   }
 }

@@ -1,7 +1,7 @@
 export 'src/event.dart';
 export 'src/interval.dart';
 export 'src/observable.dart';
-export 'src/sim_observer.dart';
+export 'src/sim_listener.dart';
 export 'src/event_phase.dart';
 export 'src/resources.dart' hide ResourcesFactory, ResourceStore;
 export 'src/simdart.dart' hide SimDartHelper;

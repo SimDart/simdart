@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event_phase.dart';
 import 'package:simdart/src/internal/completer_action.dart';
+import 'package:simdart/src/internal/completer_interrupt.dart';
 import 'package:simdart/src/internal/event_action.dart';
 import 'package:simdart/src/simdart.dart';
 
@@ -153,17 +154,17 @@ class ResourcesContext extends Resources {
   /// - Returns: A [Future] that completes when the resource is acquired.
   Future<void> acquire(String name) async {
     if (_event.eventCompleter != null) {
+      //TODO method or throw?
       SimDartHelper.error(
           sim: _sim,
-          msg:
-              "This event should be waiting for the resource to be released. Did you forget to use 'await'?");
+          error:StateError("This event should be waiting. Did you forget to use 'await'?"));
       return;
     }
     _ResourceImpl? resource = _store._map[name];
     if (resource != null) {
       bool acquired = resource.acquire(_event);
       if (!acquired) {
-        _sim.observer?.onEvent(
+        _sim.listener?.onEvent(
             name: _event.eventName,
             time: _sim.now,
             phase: EventPhase.yielded,
@@ -171,7 +172,7 @@ class ResourcesContext extends Resources {
         _event.buildCompleter();
         resource._waiting.add(_event);
         SimDartHelper.scheduleNextAction(sim: _sim);
-        await _event.eventCompleter!.future;
+          await _event.eventCompleter!.future;
         return await acquire(name);
       }
     }
@@ -185,14 +186,15 @@ class ResourcesContext extends Resources {
     if (resource != null) {
       if (resource.release(_sim, _event)) {
         if (resource._waiting.isNotEmpty) {
-          EventAction other = resource._waiting.removeAt(0);
+          EventAction waitingEvent = resource._waiting.removeAt(0);
           // Schedule a complete to resume this event in the future.
           SimDartHelper.addAction(
               sim: _sim,
               action: CompleterAction(
                   start: _sim.now,
-                  complete: other.eventCompleter!.complete,
-                  order: other.order));
+                  complete: waitingEvent.eventCompleter!.complete,
+                  order: waitingEvent.order));
+          //TODO need?
           SimDartHelper.scheduleNextAction(sim: _sim);
         }
       }

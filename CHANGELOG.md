@@ -1,10 +1,15 @@
+## 0.4.0
+
+* Added
+  * `stop` method in `SimContext`.
+
 ## 0.3.0
 
 * Access the list of created resources.
 * Added
   * `runState` getter to determine whether the simulation has not started, is running, or has completed.
   * `stop` method to manually stop the simulation before it completes.
-  * Observer to receive data throughout the simulation.
+  * Listener to receive data throughout the simulation.
 
 ## 0.2.0
 

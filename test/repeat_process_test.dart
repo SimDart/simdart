@@ -8,7 +8,7 @@ void main() {
   TestHelper helper = TestHelper();
 
   setUp(() {
-    sim = SimDart(observer: helper);
+    sim = SimDart(listener: helper);
   });
 
   group('Repeat process', () {
@@ -19,7 +19,7 @@ void main() {
           interval: Interval.fixed(fixedInterval: 1, untilTime: 2));
 
       await sim.run();
-      helper.test([
+      helper.testEvents([
         '[0][A0][called]',
         '[0][A0][finished]',
         '[1][A1][called]',
@@ -38,7 +38,7 @@ void main() {
           interval: Interval.fixed(fixedInterval: 1, untilTime: 2));
 
       await sim.run();
-      helper.test([
+      helper.testEvents([
         '[0][A0][called]',
         '[0][A0][yielded]',
         '[1][A0][resumed]',
@@ -73,7 +73,7 @@ void main() {
 
       await sim.run();
 
-      helper.test([
+      helper.testEvents([
         '[0][A][called]',
         '[0][A][yielded]',
         '[0][B][called]',
@@ -99,7 +99,7 @@ void main() {
 
       await sim.run();
 
-      helper.test([
+      helper.testEvents([
         '[0][A0][called]',
         '[0][A0][yielded]',
         '[1][A1][called]',
@@ -134,7 +134,7 @@ void main() {
 
       await sim.run();
 
-      helper.test([
+      helper.testEvents([
         '[0][A0][called]',
         '[0][A0][yielded]',
         '[2][A0][resumed]',
