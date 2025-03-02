@@ -110,6 +110,7 @@ class SimDart implements SimDartInterface {
   /// - [until]: The time at which execution should stop. Execution will include events
   ///   scheduled at this time (inclusive). If null, execution will continue indefinitely.
   Future<SimResult> run({int? until}) async {
+
     if (runState != RunState.notStarted) {
       throw StateError('Simulation has already started.');
     }
@@ -131,13 +132,8 @@ class SimDart implements SimDartInterface {
       _scheduleNextAction();
       await _terminator.future;
 
-      try {
-        _disposeCompleteList();
-      }catch(e){
-        print(e);
-      }
-
-      print('foi: ${_error.runtimeType}: $_error');
+      print('terminou');
+      print('foi com erro? -> ${_error.runtimeType}: $_error');
       if (_error != null) {
         print('ue? erro?');
         _runState = RunState.error;
@@ -266,6 +262,7 @@ class SimDart implements SimDartInterface {
     _debugListener?.onNextAction();
     _nextActionScheduled = false;
     if (_actions.isEmpty || runState!=RunState.running) {
+      _disposeCompleteList();
       if(!_terminator.isCompleted) {
         _terminator.complete();
       }

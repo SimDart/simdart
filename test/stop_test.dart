@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:simdart/src/simdart.dart';
 import 'package:test/test.dart';
 
 import 'test_helper.dart';
+
+
 
 void main() {
   late SimDart sim;
@@ -11,6 +15,8 @@ void main() {
     sim = SimDart(listener: helper);
     SimDartHelper.setDebugListener(sim: sim, listener: helper);
   });
+
+
 
   group('Stop', () {
     test('Simple', () async {
@@ -76,8 +82,10 @@ void main() {
         'scheduleNextAction',
         'nextAction'
       ]);
+      print("counter valor:${sim.counter('counter').value} ");
       expect(sim.counter('counter').value, 1);
       expect(helper.completerCount, 0);
+      print('---------------');
     });
 
     test('Resource', () async {

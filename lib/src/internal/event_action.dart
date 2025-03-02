@@ -64,6 +64,7 @@ class EventAction extends TimeAction implements SimContext {
     event(this).then((_) {
       print('then $eventName ${sim.runState.name}');
         if (_eventCompleter != null && sim.runState==RunState.running) {
+          SimDartHelper.removeCompleter(sim: sim, completer: _eventCompleter!.completer);
           //TODO method or throw?
           print('aqui 2?');
           SimDartHelper.error(
@@ -92,6 +93,7 @@ class EventAction extends TimeAction implements SimContext {
   @override
   Future<void> wait(int delay) async {
     if (_eventCompleter != null) {
+      SimDartHelper.removeCompleter(sim: sim, completer: _eventCompleter!.completer);
       //TODO method or throw?
       print('aqui 1?');
       SimDartHelper.error(
@@ -149,6 +151,7 @@ class EventAction extends TimeAction implements SimContext {
 
   @override
   SimCounter counter(String name) {
+    print("counter");
     return sim.counter(name);
   }
 
@@ -160,14 +163,16 @@ class EventAction extends TimeAction implements SimContext {
 
 class EventCompleter {
   EventCompleter({required this.event}){
-    SimDartHelper.addCompleter(sim: event.sim, completer: _completer);
+    SimDartHelper.addCompleter(sim: event.sim, completer: completer);
   }
 
-  final Completer<void> _completer = Completer();
+  final Completer<void> completer = Completer();
 
   final EventAction event;
 
-  Future<void> get future => _completer.future;
+  Future<void> get future {
+    return completer.future;
+  }
 
   void complete() {
     event.sim.listener?.onEvent(
@@ -175,8 +180,8 @@ class EventCompleter {
         time: event.sim.now,
         phase: EventPhase.resumed,
         executionHash: hashCode);
-      _completer.complete();
+      completer.complete();
     event._eventCompleter = null;
-    SimDartHelper.removeCompleter(sim: event.sim, completer: _completer);
+    SimDartHelper.removeCompleter(sim: event.sim, completer: completer);
   }
 }

@@ -154,6 +154,7 @@ class ResourcesContext extends Resources {
   /// - Returns: A [Future] that completes when the resource is acquired.
   Future<void> acquire(String name) async {
     if (_event.eventCompleter != null) {
+      SimDartHelper.removeCompleter(sim: _sim, completer: _event.eventCompleter!.completer);
       //TODO method or throw?
       SimDartHelper.error(
           sim: _sim,
