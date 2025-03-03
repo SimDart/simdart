@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:simdart/src/simdart.dart';
 import 'package:test/test.dart';
 
