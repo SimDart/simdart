@@ -153,11 +153,13 @@ class ResourcesContext extends Resources {
   /// - Returns: A [Future] that completes when the resource is acquired.
   Future<void> acquire(String name) async {
     if (_event.eventCompleter != null) {
-      SimDartHelper.removeCompleter(sim: _sim, completer: _event.eventCompleter!.completer);
+      SimDartHelper.removeCompleter(
+          sim: _sim, completer: _event.eventCompleter!.completer);
       //TODO method or throw?
       SimDartHelper.error(
           sim: _sim,
-          error:StateError("This event should be waiting. Did you forget to use 'await'?"));
+          error: StateError(
+              "This event should be waiting. Did you forget to use 'await'?"));
       return;
     }
     _ResourceImpl? resource = _store._map[name];
@@ -172,7 +174,7 @@ class ResourcesContext extends Resources {
         _event.buildCompleter();
         resource._waiting.add(_event);
         SimDartHelper.scheduleNextAction(sim: _sim);
-          await _event.eventCompleter!.future;
+        await _event.eventCompleter!.future;
         return await acquire(name);
       }
     }

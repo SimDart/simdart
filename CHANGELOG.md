@@ -2,6 +2,7 @@
 
 * Added
   * `stop` method in `SimContext`.
+  * Error handling.
 
 ## 0.3.0
 

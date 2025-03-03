@@ -5,18 +5,13 @@ import 'package:test/expect.dart';
 
 class TestHelper with SimListenerMixin implements DebugListener {
   final List<String> _events = [];
-  final List<String> _tracks =[];
 
   int get length => _events.length;
-  int _completerCount=0;
-  int get completerCount=>_completerCount;
+  int _completerCount = 0;
+  int get completerCount => _completerCount;
 
   void testEvents(List<String> events) {
     expect(_events, events);
-  }
-
-  void testTracks(List<String> tracks) {
-    expect(_tracks, tracks);
   }
 
   @override
@@ -30,40 +25,17 @@ class TestHelper with SimListenerMixin implements DebugListener {
 
   @override
   void onStart() {
-    _completerCount=0;
+    _completerCount = 0;
     _events.clear();
-    _tracks.clear();
   }
 
   @override
-  void onScheduleNextAction(){
-    _tracks.add('scheduleNextAction');
-  }
-
-  @override
-  void onNextAction() {
-    _tracks.add('nextAction');
-  }
-
-  @override
-  void onExecuteAction() {
-    _tracks.add('executeAction');
-  }
-
-  @override
-  void onStop() {
-    _tracks.add('stop');
-  }
-
-  @override
-  void onAddCompleter(){
+  void onAddCompleter() {
     _completerCount++;
   }
 
   @override
-  void onRemoveCompleter(){
+  void onRemoveCompleter() {
     _completerCount--;
   }
-
-
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:simdart/src/simdart.dart';
 import 'package:test/test.dart';
 
@@ -12,17 +14,18 @@ void main() {
     SimDartHelper.setDebugListener(sim: sim, listener: helper);
   });
 
-  group('Stop', () {
+  group('Error', () {
     test('Simple', () async {
       sim.process(
           event: (context) async {
-            context.stop();
+            throw 'ERROR';
           },
           name: 'a');
       sim.process(event: (context) async {}, name: 'b');
 
-      await sim.run();
-      helper.testEvents(['[0][a][called]', '[0][a][finished]']);
+      await expectLater(sim.run(), throwsA(equals('ERROR')));
+
+      helper.testEvents(['[0][a][called]']);
       expect(helper.completerCount, 0);
     });
 
@@ -37,18 +40,15 @@ void main() {
       sim.process(
           delay: 1,
           event: (context) async {
-            context.stop();
+            throw 'ERROR';
           },
           name: 'b');
       sim.process(delay: 2, event: (context) async {}, name: 'c');
-      await sim.run();
 
-      helper.testEvents([
-        '[0][a][called]',
-        '[0][a][yielded]',
-        '[1][b][called]',
-        '[1][b][finished]'
-      ]);
+      await expectLater(sim.run(), throwsA(equals('ERROR')));
+
+      helper
+          .testEvents(['[0][a][called]', '[0][a][yielded]', '[1][b][called]']);
       expect(sim.counter('counter').value, 1);
       expect(helper.completerCount, 0);
     });
@@ -75,19 +75,19 @@ void main() {
       sim.process(
           delay: 2,
           event: (context) async {
-            context.stop();
+            throw 'ERROR';
           },
           name: 'c');
       sim.process(delay: 3, event: (context) async {}, name: 'd');
-      await sim.run();
+
+      await expectLater(sim.run(), throwsA(equals('ERROR')));
 
       helper.testEvents([
         '[0][a][called]',
         '[0][a][yielded]',
         '[1][b][called]',
         '[1][b][yielded]',
-        '[2][c][called]',
-        '[2][c][finished]'
+        '[2][c][called]'
       ]);
       expect(sim.counter('counter1').value, 1);
       expect(sim.counter('counter2').value, 1);

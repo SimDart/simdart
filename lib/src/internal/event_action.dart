@@ -50,7 +50,6 @@ class EventAction extends TimeAction implements SimContext {
 
   @override
   void execute() {
-    print('execute: $eventName');
     if (_eventCompleter != null) {
       throw StateError('This event is yielding');
     }
@@ -62,30 +61,25 @@ class EventAction extends TimeAction implements SimContext {
         executionHash: hashCode);
 
     event(this).then((_) {
-      print('then $eventName ${sim.runState.name}');
-        if (_eventCompleter != null && sim.runState==RunState.running) {
-          SimDartHelper.removeCompleter(sim: sim, completer: _eventCompleter!.completer);
-          //TODO method or throw?
-          print('aqui 2?');
-          SimDartHelper.error(
-              sim: sim,
-              error:
-              StateError(
-                  "Next event is being scheduled, but the current one is still paused waiting for continuation. Did you forget to use 'await'?"));
-          return;
-        }
-        sim.listener?.onEvent(
-            name: eventName,
-            time: sim.now,
-            phase: EventPhase.finished,
-            executionHash: hashCode);
-        SimDartHelper.scheduleNextAction(sim: sim);
+      if (_eventCompleter != null && sim.runState == RunState.running) {
+        SimDartHelper.removeCompleter(
+            sim: sim, completer: _eventCompleter!.completer);
+        SimDartHelper.error(
+            sim: sim,
+            error: StateError(
+                "Next event is being scheduled, but the current one is still paused waiting for continuation. Did you forget to use 'await'?"));
+        return;
+      }
+      sim.listener?.onEvent(
+          name: eventName,
+          time: sim.now,
+          phase: EventPhase.finished,
+          executionHash: hashCode);
+      SimDartHelper.scheduleNextAction(sim: sim);
     }).catchError((error) {
-      print('ZZ $error');
-      //TODO rever
-      if(error is! CompleterInterrupt) {
-        print('aqui 3?');
+      if (error is! CompleterInterrupt) {
         SimDartHelper.error(sim: sim, error: error);
+        SimDartHelper.scheduleNextAction(sim: sim);
       }
     });
   }
@@ -93,12 +87,12 @@ class EventAction extends TimeAction implements SimContext {
   @override
   Future<void> wait(int delay) async {
     if (_eventCompleter != null) {
-      SimDartHelper.removeCompleter(sim: sim, completer: _eventCompleter!.completer);
-      //TODO method or throw?
-      print('aqui 1?');
+      SimDartHelper.removeCompleter(
+          sim: sim, completer: _eventCompleter!.completer);
       SimDartHelper.error(
           sim: sim,
-          error: StateError("The event is already waiting. Did you forget to use 'await'?"));
+          error: StateError(
+              "The event is already waiting. Did you forget to use 'await'?"));
       return;
     }
 
@@ -119,7 +113,7 @@ class EventAction extends TimeAction implements SimContext {
             order: order));
 
     SimDartHelper.scheduleNextAction(sim: sim);
-      await _eventCompleter!.future;
+    await _eventCompleter!.future;
   }
 
   @override
@@ -145,13 +139,13 @@ class EventAction extends TimeAction implements SimContext {
   }
 
   @override
-  void stop(){
-    SimDartHelper.addAction(sim: sim, action: StopAction(start: sim.now, sim:sim));
+  void stop() {
+    SimDartHelper.addAction(
+        sim: sim, action: StopAction(start: sim.now, sim: sim));
   }
 
   @override
   SimCounter counter(String name) {
-    print("counter");
     return sim.counter(name);
   }
 
@@ -162,7 +156,7 @@ class EventAction extends TimeAction implements SimContext {
 }
 
 class EventCompleter {
-  EventCompleter({required this.event}){
+  EventCompleter({required this.event}) {
     SimDartHelper.addCompleter(sim: event.sim, completer: completer);
   }
 
@@ -180,7 +174,7 @@ class EventCompleter {
         time: event.sim.now,
         phase: EventPhase.resumed,
         executionHash: hashCode);
-      completer.complete();
+    completer.complete();
     event._eventCompleter = null;
     SimDartHelper.removeCompleter(sim: event.sim, completer: completer);
   }

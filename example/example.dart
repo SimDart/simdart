@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:simdart/simdart.dart';
 
 void main() async {
-
   final SimDart sim = SimDart(listener: ConsoleEventListener());
 
   sim.process(event: _eventA, name: 'A');

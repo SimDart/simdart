@@ -130,24 +130,24 @@ void main() {
       ]);
     });
 
-
-
     test('without await', () async {
-      expect(
-        () async {
-          sim.resources.limited(name: 'r', capacity: 1);
-          sim.process(
-              event: (context) async {
-                context.resources.acquire('r'); // acquired
-                context.resources.acquire('r'); // should await
-                context.resources.acquire('r'); // error
-              },
-              name: 'a');
-          sim.process(event: (context) async {});
-          await sim.run();
-        },
-          throwsA(isA<StateError>().having((e) => e.message, 'message', equals("This event should be waiting. Did you forget to use 'await'?")))
-      );
+      expect(() async {
+        sim.resources.limited(name: 'r', capacity: 1);
+        sim.process(
+            event: (context) async {
+              context.resources.acquire('r'); // acquired
+              context.resources.acquire('r'); // should await
+              context.resources.acquire('r'); // error
+            },
+            name: 'a');
+        sim.process(event: (context) async {});
+        await sim.run();
+      },
+          throwsA(isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              equals(
+                  "This event should be waiting. Did you forget to use 'await'?"))));
     });
   });
 }

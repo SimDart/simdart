@@ -3,9 +3,7 @@ import 'package:test/test.dart';
 
 import 'test_helper.dart';
 
-Future<void> emptyEvent(SimContext context) async {
-  print('a');
-}
+Future<void> emptyEvent(SimContext context) async {}
 
 void main() {
   late SimDart sim;
