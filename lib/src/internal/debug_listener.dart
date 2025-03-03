@@ -5,8 +5,6 @@ abstract class DebugListener {
 
   void onScheduleNextAction();
 
-  void onNextAction();
-  
   void onExecuteAction();
 
   void onStop();

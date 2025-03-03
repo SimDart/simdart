@@ -3,7 +3,6 @@ import 'dart:collection';
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event_phase.dart';
 import 'package:simdart/src/internal/completer_action.dart';
-import 'package:simdart/src/internal/completer_interrupt.dart';
 import 'package:simdart/src/internal/event_action.dart';
 import 'package:simdart/src/simdart.dart';
 

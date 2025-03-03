@@ -32,14 +32,11 @@ void main() {
       helper.testEvents(['[0][a][called]', '[0][a][finished]']);
       helper.testTracks([
         'scheduleNextAction',
-        'nextAction',
         'executeAction',
         'scheduleNextAction',
-        'nextAction',
         'executeAction',
         'stop',
-        'scheduleNextAction',
-        'nextAction'
+        'scheduleNextAction'
       ]);
       expect(helper.completerCount, 0);
     });
@@ -70,17 +67,13 @@ void main() {
       ]);
       helper.testTracks([
         'scheduleNextAction',
-        'nextAction',
         'executeAction',
         'scheduleNextAction',
-        'nextAction',
         'executeAction',
         'scheduleNextAction',
-        'nextAction',
         'executeAction',
         'stop',
-        'scheduleNextAction',
-        'nextAction'
+        'scheduleNextAction'
       ]);
       print("counter valor:${sim.counter('counter').value} ");
       expect(sim.counter('counter').value, 1);
@@ -126,20 +119,15 @@ void main() {
       ]);
       helper.testTracks([
         'scheduleNextAction',
-        'nextAction',
         'executeAction',
         'scheduleNextAction',
-        'nextAction',
         'executeAction',
         'scheduleNextAction',
-        'nextAction',
         'executeAction',
         'scheduleNextAction',
-        'nextAction',
         'executeAction',
         'stop',
-        'scheduleNextAction',
-        'nextAction'
+        'scheduleNextAction'
       ]);
       expect(sim.counter('counter1').value, 1);
       expect(sim.counter('counter2').value, 1);

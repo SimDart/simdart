@@ -149,10 +149,9 @@ class SimDart implements SimDartInterface {
   void stop() {
     print("stop");
     _addAction(StopAction(start: now, sim:this));
-    _scheduleNextAction();
   }
 
-  void _disposeCompleteList() {
+  void _disposeCompleterList() {
     while (_completerList.isNotEmpty) {
       Completer<void> completer = _completerList.removeAt(0);
       _debugListener?.onRemoveCompleter();
@@ -258,11 +257,9 @@ class SimDart implements SimDartInterface {
   }
 
   Future<void> _nextAction() async {
-    print('_nextAction');
-    _debugListener?.onNextAction();
     _nextActionScheduled = false;
     if (_actions.isEmpty || runState!=RunState.running) {
-      _disposeCompleteList();
+      _disposeCompleterList();
       if(!_terminator.isCompleted) {
         _terminator.complete();
       }
