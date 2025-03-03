@@ -4,6 +4,8 @@ import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
 import 'package:simdart/src/event_phase.dart';
 import 'package:simdart/src/internal/completer_action.dart';
+import 'package:simdart/src/internal/completer_interrupt.dart';
+import 'package:simdart/src/internal/stop_action.dart';
 import 'package:simdart/src/internal/time_action.dart';
 import 'package:simdart/src/interval.dart';
 import 'package:simdart/src/resources.dart';
@@ -52,46 +54,49 @@ class EventAction extends TimeAction implements SimContext {
       throw StateError('This event is yielding');
     }
 
-    sim.observer?.onEvent(
+    sim.listener?.onEvent(
         name: eventName,
         time: sim.now,
         phase: EventPhase.called,
         executionHash: hashCode);
 
-    _runEvent().then((_) {
-      if (_eventCompleter != null) {
+    event(this).then((_) {
+      if (_eventCompleter != null && sim.runState == RunState.running) {
+        SimDartHelper.removeCompleter(
+            sim: sim, completer: _eventCompleter!.completer);
         SimDartHelper.error(
             sim: sim,
-            msg:
-                "Next event is being scheduled, but the current one is still paused waiting for continuation. Did you forget to use 'await'?");
+            error: StateError(
+                "Next event is being scheduled, but the current one is still paused waiting for continuation. Did you forget to use 'await'?"));
         return;
       }
-      sim.observer?.onEvent(
+      sim.listener?.onEvent(
           name: eventName,
           time: sim.now,
           phase: EventPhase.finished,
           executionHash: hashCode);
-
       SimDartHelper.scheduleNextAction(sim: sim);
-    }).catchError((e) {
-      // Sim already marked to finish. Let the last event finalize.
+    }).catchError((error) {
+      if (error is! CompleterInterrupt) {
+        SimDartHelper.error(sim: sim, error: error);
+        SimDartHelper.scheduleNextAction(sim: sim);
+      }
     });
-  }
-
-  Future<void> _runEvent() async {
-    await event(this);
   }
 
   @override
   Future<void> wait(int delay) async {
     if (_eventCompleter != null) {
+      SimDartHelper.removeCompleter(
+          sim: sim, completer: _eventCompleter!.completer);
       SimDartHelper.error(
           sim: sim,
-          msg: "The event is already waiting. Did you forget to use 'await'?");
+          error: StateError(
+              "The event is already waiting. Did you forget to use 'await'?"));
       return;
     }
 
-    sim.observer?.onEvent(
+    sim.listener?.onEvent(
         name: eventName,
         time: sim.now,
         phase: EventPhase.yielded,
@@ -106,8 +111,8 @@ class EventAction extends TimeAction implements SimContext {
             start: sim.now + delay,
             complete: _eventCompleter!.complete,
             order: order));
-    SimDartHelper.scheduleNextAction(sim: sim);
 
+    SimDartHelper.scheduleNextAction(sim: sim);
     await _eventCompleter!.future;
   }
 
@@ -134,6 +139,12 @@ class EventAction extends TimeAction implements SimContext {
   }
 
   @override
+  void stop() {
+    SimDartHelper.addAction(
+        sim: sim, action: StopAction(start: sim.now, sim: sim));
+  }
+
+  @override
   SimCounter counter(String name) {
     return sim.counter(name);
   }
@@ -142,29 +153,29 @@ class EventAction extends TimeAction implements SimContext {
   SimNum num(String name) {
     return sim.num(name);
   }
-
-  @override
-  void dispose() {
-    _eventCompleter?.complete();
-  }
 }
 
 class EventCompleter {
-  EventCompleter({required this.event});
+  EventCompleter({required this.event}) {
+    SimDartHelper.addCompleter(sim: event.sim, completer: completer);
+  }
 
-  final Completer<void> _completer = Completer();
+  final Completer<void> completer = Completer();
 
   final EventAction event;
 
-  Future<void> get future => _completer.future;
+  Future<void> get future {
+    return completer.future;
+  }
 
   void complete() {
-    event.sim.observer?.onEvent(
+    event.sim.listener?.onEvent(
         name: event.eventName,
         time: event.sim.now,
         phase: EventPhase.resumed,
         executionHash: hashCode);
-    _completer.complete();
+    completer.complete();
     event._eventCompleter = null;
+    SimDartHelper.removeCompleter(sim: event.sim, completer: completer);
   }
 }

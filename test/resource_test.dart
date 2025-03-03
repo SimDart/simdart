@@ -8,7 +8,7 @@ void main() {
   TestHelper helper = TestHelper();
 
   setUp(() {
-    sim = SimDart(observer: helper);
+    sim = SimDart(listener: helper);
   });
 
   group('Resource', () {
@@ -39,7 +39,7 @@ void main() {
 
       await sim.run();
 
-      helper.test([
+      helper.testEvents([
         '[0][A][called]',
         '[0][A][yielded]',
         '[0][B][called]',
@@ -73,7 +73,7 @@ void main() {
 
       await sim.run();
 
-      helper.test([
+      helper.testEvents([
         '[0][A][called]',
         '[0][A][yielded]',
         '[0][B][called]',
@@ -110,7 +110,7 @@ void main() {
 
       await sim.run();
 
-      helper.test([
+      helper.testEvents([
         '[0][A][called]',
         '[0][A][yielded]',
         '[1][B][called]',
@@ -129,27 +129,25 @@ void main() {
         '[20][C][finished]'
       ]);
     });
+
     test('without await', () async {
-      expect(
-        () async {
-          sim.resources.limited(name: 'r', capacity: 1);
-          sim.process(
-              event: (context) async {
-                context.resources.acquire('r'); // acquired
-                context.resources.acquire('r'); // should await
-                context.resources.acquire('r'); // error
-              },
-              name: 'a');
-          sim.process(event: (context) async {});
-          await sim.run();
-        },
-        throwsA(
-          predicate((e) =>
-              e is StateError &&
-              e.message.contains(
-                  "This event should be waiting for the resource to be released. Did you forget to use 'await'?")),
-        ),
-      );
+      expect(() async {
+        sim.resources.limited(name: 'r', capacity: 1);
+        sim.process(
+            event: (context) async {
+              context.resources.acquire('r'); // acquired
+              context.resources.acquire('r'); // should await
+              context.resources.acquire('r'); // error
+            },
+            name: 'a');
+        sim.process(event: (context) async {});
+        await sim.run();
+      },
+          throwsA(isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              equals(
+                  "This event should be waiting. Did you forget to use 'await'?"))));
     });
   });
 }

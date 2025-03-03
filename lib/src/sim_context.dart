@@ -13,4 +13,6 @@ abstract interface class SimContext implements SimDartInterface {
   String get eventName;
 
   ResourcesContext get resources;
+
+  void stop();
 }

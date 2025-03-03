@@ -45,7 +45,4 @@ class RepeatEventAction extends TimeAction {
     }
     SimDartHelper.scheduleNextAction(sim: sim);
   }
-
-  @override
-  void dispose() {}
 }

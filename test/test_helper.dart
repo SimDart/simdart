@@ -1,16 +1,17 @@
 import 'package:simdart/src/event_phase.dart';
-import 'package:simdart/src/sim_observer.dart';
+import 'package:simdart/src/internal/debug_listener.dart';
+import 'package:simdart/src/sim_listener.dart';
 import 'package:test/expect.dart';
 
-class TestHelper with SimObserverMixin {
+class TestHelper with SimListenerMixin implements DebugListener {
   final List<String> _events = [];
 
   int get length => _events.length;
+  int _completerCount = 0;
+  int get completerCount => _completerCount;
 
-  Function? afterOnFinishedEvent;
-
-  void test(List<String> events) {
-    expect(events, _events);
+  void testEvents(List<String> events) {
+    expect(_events, events);
   }
 
   @override
@@ -20,13 +21,21 @@ class TestHelper with SimObserverMixin {
       required EventPhase phase,
       required int executionHash}) {
     _events.add('[$time][$name][${phase.name}]');
-    if (phase == EventPhase.finished) {
-      afterOnFinishedEvent?.call();
-    }
   }
 
   @override
   void onStart() {
+    _completerCount = 0;
     _events.clear();
+  }
+
+  @override
+  void onAddCompleter() {
+    _completerCount++;
+  }
+
+  @override
+  void onRemoveCompleter() {
+    _completerCount--;
   }
 }

@@ -12,7 +12,4 @@ class CompleterAction extends TimeAction {
   void execute() {
     complete.call();
   }
-
-  @override
-  void dispose() {}
 }

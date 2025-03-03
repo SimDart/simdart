@@ -4,15 +4,18 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:simdart/src/event.dart';
+import 'package:simdart/src/internal/completer_interrupt.dart';
+import 'package:simdart/src/internal/debug_listener.dart';
 import 'package:simdart/src/internal/event_action.dart';
 import 'package:simdart/src/internal/repeat_event_action.dart';
 import 'package:simdart/src/internal/simdart_interface.dart';
+import 'package:simdart/src/internal/stop_action.dart';
 import 'package:simdart/src/internal/time_action.dart';
 import 'package:simdart/src/interval.dart';
 import 'package:simdart/src/resources.dart';
 import 'package:simdart/src/sim_counter.dart';
 import 'package:simdart/src/sim_num.dart';
-import 'package:simdart/src/sim_observer.dart';
+import 'package:simdart/src/sim_listener.dart';
 import 'package:simdart/src/sim_result.dart';
 import 'package:simdart/src/start_time_handling.dart';
 
@@ -37,7 +40,7 @@ class SimDart implements SimDartInterface {
   SimDart(
       {this.startTimeHandling = StartTimeHandling.throwErrorIfPast,
       int now = 0,
-      this.observer,
+      this.listener,
       this.executionPriority = 0,
       int? seed})
       : random = Random(seed),
@@ -46,7 +49,9 @@ class SimDart implements SimDartInterface {
   RunState _runState = RunState.notStarted;
   RunState get runState => _runState;
 
-  final SimObserver? observer;
+  DebugListener? _debugListener;
+
+  final SimListener? listener;
 
   final Map<String, SimNum> _numProperties = {};
   final Map<String, SimCounter> _counterProperties = {};
@@ -94,9 +99,11 @@ class SimDart implements SimDartInterface {
   int get now => _now;
   late int _now;
 
+  final List<Completer<void>> _completerList = [];
+
   final Completer<void> _terminator = Completer();
 
-  bool _error = false;
+  Object? _error;
 
   /// Runs the simulation, processing events in chronological order.
   ///
@@ -108,7 +115,7 @@ class SimDart implements SimDartInterface {
     }
 
     _runState = RunState.running;
-    observer?.onStart();
+    listener?.onStart();
     if (until != null && _now > until) {
       throw ArgumentError('`now` must be less than or equal to `until`.');
     }
@@ -118,19 +125,34 @@ class SimDart implements SimDartInterface {
 
     if (_actions.isEmpty) {
       _startTime = 0;
+      _runState = RunState.finished;
     } else {
       _startTime = null;
       _scheduleNextAction();
       await _terminator.future;
+      if (_error != null) {
+        _runState = RunState.error;
+        throw _error!;
+      } else {
+        _runState = RunState.finished;
+      }
       _duration = _now - (_startTime ?? 0);
     }
-    _runState = RunState.finished;
     return _buildResult();
   }
 
   void stop() {
-    if (!_terminator.isCompleted) {
-      _terminator.complete();
+    _addAction(StopAction(start: now, sim: this));
+  }
+
+  void _disposeCompleterList() {
+    while (_completerList.isNotEmpty) {
+      Completer<void> completer = _completerList.removeAt(0);
+      _debugListener?.onRemoveCompleter();
+      if (!completer.isCompleted) {
+        // prevents subsequent methods from being executed after complete inside the async method.
+        completer.completeError(CompleterInterrupt());
+      }
     }
   }
 
@@ -207,36 +229,31 @@ class SimDart implements SimDartInterface {
   }
 
   void _scheduleNextAction() {
-    if (_error) {
-      return;
-    }
     if (!_nextActionScheduled) {
       _nextActionScheduled = true;
       if (executionPriority == 0 || _executionCount < executionPriority) {
         _executionCount++;
-        Future.microtask(_consumeNextAction);
+        Future.microtask(_nextAction);
       } else {
         _executionCount = 0;
-        Future.delayed(Duration.zero, _consumeNextAction);
+        Future.delayed(Duration.zero, _nextAction);
       }
     }
   }
 
   void _addAction(TimeAction action) {
-    if (_error) {
-      return;
+    if (_runState == RunState.running || _runState == RunState.notStarted) {
+      _actions.add(action);
     }
-    _actions.add(action);
   }
 
-  Future<void> _consumeNextAction() async {
-    if (_error || _terminator.isCompleted) {
-      return;
-    }
-
+  Future<void> _nextAction() async {
     _nextActionScheduled = false;
-    if (_actions.isEmpty) {
-      _terminator.complete();
+    if (_actions.isEmpty || runState != RunState.running) {
+      _disposeCompleterList();
+      if (!_terminator.isCompleted) {
+        _terminator.complete();
+      }
       return;
     }
 
@@ -260,7 +277,7 @@ class SimDart implements SimDartInterface {
   }
 }
 
-enum RunState { notStarted, running, finished }
+enum RunState { notStarted, running, finished, stopped, error }
 
 typedef StopCondition = bool Function(SimDart sim);
 
@@ -274,19 +291,38 @@ class SimDartHelper {
     sim._addAction(action);
   }
 
-  static ResourceStore resourceStore({required SimDart sim}) =>
-      sim._resourceStore;
-
   static void scheduleNextAction({required SimDart sim}) {
     sim._scheduleNextAction();
   }
 
-  static void error({required SimDart sim, required String msg}) {
-    sim._error = true;
-    while (sim._actions.isNotEmpty) {
-      TimeAction action = sim._actions.removeFirst();
-      action.dispose();
+  static ResourceStore resourceStore({required SimDart sim}) =>
+      sim._resourceStore;
+
+  static void addCompleter(
+      {required SimDart sim, required Completer<void> completer}) {
+    sim._completerList.add(completer);
+    sim._debugListener?.onAddCompleter();
+  }
+
+  static void removeCompleter(
+      {required SimDart sim, required Completer<void> completer}) {
+    sim._completerList.remove(completer);
+    sim._debugListener?.onRemoveCompleter();
+  }
+
+  static void error({required SimDart sim, required Object error}) {
+    if (sim._error == null) {
+      sim._error = error;
+      sim._runState = RunState.error;
     }
-    sim._terminator.completeError(StateError(msg));
+  }
+
+  static void setDebugListener(
+      {required SimDart sim, required DebugListener? listener}) {
+    sim._debugListener = listener;
+  }
+
+  static void stop({required SimDart sim}) {
+    sim._runState = RunState.stopped;
   }
 }

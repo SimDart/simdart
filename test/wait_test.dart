@@ -10,7 +10,7 @@ void main() {
   TestHelper helper = TestHelper();
 
   setUp(() {
-    sim = SimDart(observer: helper);
+    sim = SimDart(listener: helper);
   });
 
   group('Wait', () {
@@ -38,7 +38,7 @@ void main() {
 
       await sim.run();
 
-      helper.test([
+      helper.testEvents([
         '[0][a][called]',
         '[0][a][yielded]',
         '[10][a][resumed]',
@@ -54,7 +54,7 @@ void main() {
       sim.process(event: emptyEvent, start: 5, name: 'b');
 
       await sim.run();
-      helper.test([
+      helper.testEvents([
         '[0][a][called]',
         '[0][a][yielded]',
         '[5][b][called]',
@@ -74,7 +74,7 @@ void main() {
       sim.process(event: emptyEvent, delay: 5, name: 'b');
 
       await sim.run();
-      helper.test([
+      helper.testEvents([
         '[0][a][called]',
         '[0][a][yielded]',
         '[5][b][called]',
@@ -87,44 +87,48 @@ void main() {
     });
 
     test('wait without await', () async {
-      expect(
-        () async {
-          sim.process(
-              event: (context) async {
-                context.wait(10);
-              },
-              name: 'a');
-          sim.process(event: emptyEvent, start: 5, name: 'b');
+      sim.process(
+          event: (context) async {
+            context.wait(10);
+          },
+          name: 'a');
+      sim.process(event: emptyEvent, start: 5, name: 'b');
+      sim.process(event: emptyEvent, start: 10, name: 'c');
 
-          await sim.run();
-        },
-        throwsA(
-          predicate((e) =>
-              e is StateError &&
-              e.message.contains(
-                  "Next event is being scheduled, but the current one is still paused waiting for continuation. Did you forget to use 'await'?")),
-        ),
-      );
+      await expectLater(
+          sim.run(),
+          throwsA(isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              equals(
+                  "Next event is being scheduled, but the current one is still paused waiting for continuation. Did you forget to use 'await'?"))));
+      helper.testEvents([
+        '[0][a][called]',
+        '[0][a][yielded]',
+        '[5][b][called]',
+        '[5][b][finished]'
+      ]);
+      expect(helper.completerCount, 0);
     });
 
     test('multiple wait without await', () async {
-      expect(
-        () async {
-          sim.process(
-              event: (context) async {
-                context.wait(10);
-                context.wait(10);
-              },
-              name: 'a');
-          await sim.run();
-        },
-        throwsA(
-          predicate((e) =>
-              e is StateError &&
-              e.message.contains(
-                  "The event is already waiting. Did you forget to use 'await'?")),
-        ),
-      );
+      sim.process(
+          event: (context) async {
+            context.wait(10);
+            context.wait(10);
+          },
+          name: 'a');
+      sim.process(event: emptyEvent, start: 5, name: 'b');
+      await expectLater(
+          sim.run(),
+          throwsA(isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              equals(
+                  "The event is already waiting. Did you forget to use 'await'?"))));
+      helper.testEvents(
+          ['[0][a][called]', '[0][a][yielded]', '[0][a][finished]']);
+      expect(helper.completerCount, 0);
     });
   });
 }

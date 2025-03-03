@@ -5,40 +5,35 @@ import 'test_helper.dart';
 
 Future<void> emptyEvent(SimContext context) async {}
 
-Future<void> loopEvent(SimContext context) async {
-  context.process(event: loopEvent);
-}
-
 void main() {
   late SimDart sim;
   TestHelper helper = TestHelper();
 
   setUp(() {
-    helper.afterOnFinishedEvent = null;
     // priority to allow test timeout
-    sim = SimDart(executionPriority: 5, observer: helper);
+    sim = SimDart(executionPriority: 5, listener: helper);
   });
 
   group('Process', () {
     test('start 1', () async {
       sim.process(event: emptyEvent, name: 'a');
       await sim.run();
-      helper.test(['[0][a][called]', '[0][a][finished]']);
+      helper.testEvents(['[0][a][called]', '[0][a][finished]']);
     });
     test('start 2', () async {
       sim.process(event: emptyEvent, start: 10, name: 'a');
       await sim.run();
-      helper.test(['[10][a][called]', '[10][a][finished]']);
+      helper.testEvents(['[10][a][called]', '[10][a][finished]']);
     });
     test('delay 1', () async {
       sim.process(event: emptyEvent, delay: 0, name: 'a');
       await sim.run();
-      helper.test(['[0][a][called]', '[0][a][finished]']);
+      helper.testEvents(['[0][a][called]', '[0][a][finished]']);
     });
     test('delay 2', () async {
       sim.process(event: emptyEvent, delay: 10, name: 'a');
       await sim.run();
-      helper.test(['[10][a][called]', '[10][a][finished]']);
+      helper.testEvents(['[10][a][called]', '[10][a][finished]']);
     });
     test('delay 3', () async {
       sim.process(
@@ -48,7 +43,7 @@ void main() {
           start: 5,
           name: 'a');
       await sim.run();
-      helper.test([
+      helper.testEvents([
         '[5][a][called]',
         '[5][a][finished]',
         '[15][b][called]',
@@ -69,7 +64,7 @@ void main() {
           start: 2,
           name: 'c');
       await sim.run();
-      helper.test([
+      helper.testEvents([
         '[0][a][called]',
         '[0][a][finished]',
         '[2][c][called]',
@@ -79,12 +74,6 @@ void main() {
         '[10][b][called]',
         '[10][b][finished]'
       ]);
-    });
-    test('stop', timeout: Timeout(Duration(seconds: 2)), () async {
-      helper.afterOnFinishedEvent = () => sim.stop();
-      sim.process(event: loopEvent, name: 'a');
-      await sim.run();
-      helper.test(['[0][a][called]', '[0][a][finished]']);
     });
   });
 }
